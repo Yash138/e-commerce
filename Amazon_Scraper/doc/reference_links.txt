@@ -4,3 +4,9 @@ Discussion: https://medium.com/@peterkong/comparison-of-python-documentation-gen
 Sphinx 
 https://www.youtube.com/watch?v=b4iFyrLQQh4
 
+
+Use asyncIO for handling lag due to network IO
+    https://realpython.com/async-io-python/
+Use Ray for overall parallelism of the process
+    https://www.anyscale.com/blog/writing-your-first-distributed-python-application-with-ray
+
