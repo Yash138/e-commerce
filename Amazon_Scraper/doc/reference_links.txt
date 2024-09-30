@@ -1,0 +1,6 @@
+Use either of these two for documentation: Pdoc , Sphinx 
+Discussion: https://medium.com/@peterkong/comparison-of-python-documentation-generators-660203ca3804#:~:text=Unless%20your%20team%20is%20already%20using%20Doxygen,harder%20to%20set%20up%20and%20use%20than
+
+Sphinx 
+https://www.youtube.com/watch?v=b4iFyrLQQh4
+
