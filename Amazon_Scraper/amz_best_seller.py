@@ -52,10 +52,11 @@ options.add_argument("--headless")
 driver = webdriver.Chrome(options=options, service=Service(ChromeDriverManager().install()))
 
 product_details = namedtuple("BestSellers", ['asin', 'category', 'sub_category', 'product_name', 'rank', 'product_url', 'load_timestamp'])
-best_sellers = list()
+
 
 for url in scrap_urls:
     category = url[0]
+    best_sellers = list()
     # if 'car' in category.lower(): continue
     print('Sracping for category:',category)
     try:
@@ -94,7 +95,7 @@ for url in scrap_urls:
     db.connect()
     db.execute_many_query(insert_query, df.values.tolist())
     db.close()
-    break
+    # break
 driver.quit()
 # print(len(BestSellers))
 # for i in BestSellers:
