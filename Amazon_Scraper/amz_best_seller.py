@@ -22,7 +22,7 @@ import argparse
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--load_type", default='FullRefresh', help="Incremental | FullRefresh")
+parser.add_argument("--load_type", default='Incremental', help="Incremental | FullRefresh")
 
 # Parse arguments
 args = parser.parse_args()
@@ -46,13 +46,14 @@ elif args.load_type == 'Incremental':
     
 scrap_urls = db.fetch_all(query)
 db.close()
+if len(scrap_urls) == 0:
+    exit('ALREADY REFRESHED!!')
 
 options = webdriver.ChromeOptions()
 options.add_argument("--headless")
 driver = webdriver.Chrome(options=options, service=Service(ChromeDriverManager().install()))
 
 product_details = namedtuple("BestSellers", ['asin', 'category', 'sub_category', 'product_name', 'rank', 'product_url', 'load_timestamp'])
-
 
 for url in scrap_urls:
     category = url[0]
@@ -104,5 +105,6 @@ driver.quit()
 # df.values.tolist()
 
 db.connect()
-db.execute_query("exec processed.sp_update_master_tables")
+db.execute_query("exec dbo.sp_update_master_tables")
+db.execute_query("exec dbo.sp_process_best_seller")
 db.close()
