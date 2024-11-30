@@ -15,7 +15,7 @@ import argparse
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--load_type", default='FullRefresh', help="Incremental | FullRefresh")
+parser.add_argument("--load_type", default='Incremental', help="Incremental | FullRefresh")
 
 # Parse arguments
 args = parser.parse_args()
@@ -100,6 +100,10 @@ options = webdriver.ChromeOptions()
 options.add_argument("--headless")
 driver = webdriver.Chrome(options=options, service=Service(ChromeDriverManager().install()))
 
+# truncate the stage table before inserting new records.
+db.connect()
+db.execute_query("truncate table staging.stg_amz__best_sellers")
+db.close()
 
 for category, url in scrap_urls:
     resp = extract_and_load_bs(driver, db, category, url)
