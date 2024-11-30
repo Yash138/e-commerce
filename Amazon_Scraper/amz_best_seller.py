@@ -1,10 +1,3 @@
-"""
-    done : get the urls of active categories and sub_categories
-        delete the records from [staging].[stg_amz__best_seller_products] for the categories we are going to scrap
-    done: scrap these categories and ingest in stage table
-        run SP to transform data and ingest it to processed schema
-"""
-
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 # import from webdriver_manager (using underscore)
@@ -22,11 +15,65 @@ import argparse
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--load_type", default='Incremental', help="Incremental | FullRefresh")
+parser.add_argument("--load_type", default='FullRefresh', help="Incremental | FullRefresh")
 
 # Parse arguments
 args = parser.parse_args()
 print(args.load_type)
+
+def extract_and_load_bs(driver, db_instance, category, url):
+    product_details = namedtuple("BestSellers", ['asin', 'category', 'sub_category', 'product_name', 'rank', 'product_url', 'load_timestamp'])
+    best_sellers = list()
+    print('Sracping for category:', category)
+    try:
+        driver.get(url)
+        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+        time.sleep(10) # let the whole page load
+        items = wait(driver, 10).until(EC.presence_of_all_elements_located((By.XPATH, '//div[contains(@id, "gridItemRoot")]')))
+    except Exception as e:
+        tb = traceback.TracebackException.from_exception(e)
+        print(f'\nFailed to fetch data for {category}\nError: {tb.exc_type_str}\n')
+        return False
+    load_time = dt.now()
+    for i,item in enumerate(items):
+        # print(i)
+        rnk = find_element(item, By.XPATH, f'//*[@id="p13n-asin-index-{i}"]/div/div[1]/div[1]/span').text
+        asin = find_element(item, By.CLASS_NAME, 'p13n-sc-uncoverable-faceout').get_attribute("id")
+        product_url = find_element(item, By.XPATH, f'//*[@id="{asin}"]/div/div/a').get_attribute("href")
+        name = find_element(item, By.XPATH, f'//*[@id="{asin}"]/div/div/a/span/div').text
+        best_sellers.append(
+            product_details(
+                asin=asin,
+                category=category.split('||')[0],
+                sub_category= '||'.join(category.split('||')[1:]),
+                product_name=name,
+                rank=rnk,
+                product_url=product_url,
+                load_timestamp=load_time.strftime('%Y-%m-%d %H:%M:%S')
+            )    
+        )
+    df = pd.DataFrame(best_sellers)
+    # df["load_timestamp"] = dt.now().strftime('%Y-%m-%d %H:%M:%S')
+    insert_query = '''
+        INSERT INTO staging.stg_amz__best_sellers (ASIN,Category,SubCategory,ProductName,Rank,ProductUrl,LoadTimestamp)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    '''
+    db_instance.connect()
+    db_instance.execute_many_query(insert_query, df.values.tolist())
+    db_instance.close()
+    # break
+
+def get_next_page(driver, url):
+    try:
+        driver.get(url)
+        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+        time.sleep(10) # let the whole page load
+        next_page = find_element(driver, By.CSS_SELECTOR, 'li.a-last a').get_attribute("href")
+    except Exception as e:
+        tb = traceback.TracebackException.from_exception(e)
+        print(f'\nFailed to fetch next page url for {category}\nError: {tb.exc_type_str}\n')
+        return False
+    return next_page    
 
 db = SQLServerExpress(estd_conn=True)
 if args.load_type == 'FullRefresh':
@@ -53,56 +100,16 @@ options = webdriver.ChromeOptions()
 options.add_argument("--headless")
 driver = webdriver.Chrome(options=options, service=Service(ChromeDriverManager().install()))
 
-product_details = namedtuple("BestSellers", ['asin', 'category', 'sub_category', 'product_name', 'rank', 'product_url', 'load_timestamp'])
 
-for url in scrap_urls:
-    category = url[0]
-    best_sellers = list()
-    # if 'car' in category.lower(): continue
-    print('Sracping for category:',category)
-    try:
-        driver.get(url[1])
-        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-        time.sleep(10) # let the whole page load
-        items = wait(driver, 10).until(EC.presence_of_all_elements_located((By.XPATH, '//div[contains(@id, "gridItemRoot")]')))
-    except Exception as e:
-        tb = traceback.TracebackException.from_exception(e)
-        print(f'\nFailed to fetch data for {category}\nError: {tb.exc_type_str}\n')
-        continue
-    load_time = dt.now()
-    for i,item in enumerate(items):
-        # print(i)
-        rnk = find_element(item, By.XPATH, f'//*[@id="p13n-asin-index-{i}"]/div/div[1]/div[1]/span').text
-        asin = find_element(item, By.CLASS_NAME, 'p13n-sc-uncoverable-faceout').get_attribute("id")
-        product_url = find_element(item, By.XPATH, f'//*[@id="{asin}"]/div/div/a').get_attribute("href")
-        name = find_element(item, By.XPATH, f'//*[@id="{asin}"]/div/div/a/span/div').text
-        best_sellers.append(
-            product_details(
-                asin=asin,
-                category=category.split('||')[0],
-                sub_category= '||'.join(category.split('||')[1:]),
-                product_name=name,
-                rank=rnk,
-                product_url=product_url,
-                load_timestamp=load_time.strftime('%Y-%m-%d %H:%M:%S')
-            )    
-        )
-    df = pd.DataFrame(best_sellers)
-    # df["load_timestamp"] = dt.now().strftime('%Y-%m-%d %H:%M:%S')
-    insert_query = '''
-        INSERT INTO staging.stg_amz__best_sellers (ASIN,Category,SubCategory,ProductName,Rank,ProductUrl,LoadTimestamp)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    '''
-    db.connect()
-    db.execute_many_query(insert_query, df.values.tolist())
-    db.close()
-    # break
+for category, url in scrap_urls:
+    resp = extract_and_load_bs(driver, db, category, url)
+    if url_next := get_next_page(driver, url):
+        print("Scraping Next Page...")
+        resp = extract_and_load_bs(driver, db, category, url_next)
+    else:
+        print("Next button not found or no next page not available.")
+
 driver.quit()
-# print(len(BestSellers))
-# for i in BestSellers:
-#     print(i)
-
-# df.values.tolist()
 
 db.connect()
 db.execute_query("exec dbo.sp_update_master_tables")
