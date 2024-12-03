@@ -8,12 +8,12 @@ from selenium.webdriver.support import expected_conditions as EC
 import time
 from datetime import datetime as dt
 from collections import namedtuple
-from common.util import SQLServerExpress, find_element
+from common.util import SQLServerExpress, safe_get_element_value
 import pandas as pd
 import traceback
 import argparse
 
-
+st_time = dt.now()
 parser = argparse.ArgumentParser()
 parser.add_argument("--load_type", default='Incremental', help="Incremental | FullRefresh")
 
@@ -37,10 +37,10 @@ def extract_and_load_bs(driver, db_instance, category, url):
     load_time = dt.now()
     for i,item in enumerate(items):
         # print(i)
-        rnk = find_element(item, By.XPATH, f'//*[@id="p13n-asin-index-{i}"]/div/div[1]/div[1]/span').text
-        asin = find_element(item, By.CLASS_NAME, 'p13n-sc-uncoverable-faceout').get_attribute("id")
-        product_url = find_element(item, By.XPATH, f'//*[@id="{asin}"]/div/div/a').get_attribute("href")
-        name = find_element(item, By.XPATH, f'//*[@id="{asin}"]/div/div/a/span/div').text
+        rnk = safe_get_element_value(item, By.XPATH, f'//*[@id="p13n-asin-index-{i}"]/div/div[1]/div[1]/span', mode='text')
+        asin = safe_get_element_value(item, By.CLASS_NAME, 'p13n-sc-uncoverable-faceout', mode='attribute', attribute='id')
+        product_url = safe_get_element_value(item, By.XPATH, f'//*[@id="{asin}"]/div/div/a', mode='attribute', attribute='href')
+        name = safe_get_element_value(item, By.XPATH, f'//*[@id="{asin}"]/div/div/a/span/div', mode='text')
         best_sellers.append(
             product_details(
                 asin=asin,
@@ -68,7 +68,7 @@ def get_next_page(driver, url):
         driver.get(url)
         driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
         time.sleep(10) # let the whole page load
-        next_page = find_element(driver, By.CSS_SELECTOR, 'li.a-last a').get_attribute("href")
+        next_page = safe_get_element_value(driver, By.CSS_SELECTOR, 'li.a-last a', mode='attribute', attribute='href')
     except Exception as e:
         tb = traceback.TracebackException.from_exception(e)
         print(f'\nFailed to fetch next page url for {category}\nError: {tb.exc_type_str}\n')
@@ -119,3 +119,7 @@ db.connect()
 db.execute_query("exec dbo.sp_update_master_tables")
 db.execute_query("exec dbo.sp_process_best_seller")
 db.close()
+
+print(
+    "Total Execution Time:", dt.now() - st_time
+)

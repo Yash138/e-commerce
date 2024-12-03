@@ -8,17 +8,24 @@ def printArgs(*args):
     for i in args:
         print(i)
      
-def find_element(item, by, value):
+def safe_get_element_value(driver, by, value, mode="text", attribute=None, default=None):
     try:
-        attribute = item.find_element(by, value)
+        element = driver.find_element(by, value)
+        if mode == "text":
+            element = element.text.strip()
+        elif mode == "attribute" and attribute:
+            element = element.get_attribute(attribute)
+        else:
+            raise ValueError("Invalid mode or attribute not specified.")
+        element = element if element else default
     except Exception as e:
         tb = traceback.TracebackException.from_exception(e)
         if 'NoSuchElementException' in tb.exc_type_str:
-            attribute = None
+            element = default
         else:
             raise Exception (e)
-    return attribute
-
+    finally:
+        return element
 
 class SQLServerExpress:
     def __init__(self, estd_conn = False):
