@@ -1,4 +1,6 @@
 import pymongo
+from Ecommerce_Scraper.settings import MONGO_DATABASE, MONGO_URI
+
 
 class MongoDBHandler:
     def __init__(self, mongo_uri, mongo_db):
@@ -68,3 +70,21 @@ class MongoDBHandler:
         """
         self.connect()
         return self.db[collection_name].delete_many(query)
+
+
+def getCategoryUrls():
+    mongo_handler = MongoDBHandler(MONGO_URI, MONGO_DATABASE)
+    results_category = mongo_handler.find(
+        "amz__product_category", 
+        {'IsActive':True},
+        {'Category':1, 'SubCategory':{'$literal':''}, 'Url':1, '_id':0}
+    )
+
+    results_subCategory = mongo_handler.find(
+        "amz__product_subcategory", 
+        {'IsActive':True},
+        {'Category':1, 'SubCategory':1, 'Url':1, '_id':0}
+    )
+    # print(list(results_category),list(results_subCategory))
+    results = list(results_category)+list(results_subCategory)
+    return results if results else []
