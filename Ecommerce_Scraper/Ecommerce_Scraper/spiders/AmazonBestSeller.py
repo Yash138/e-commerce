@@ -44,7 +44,7 @@ class AmazonBestSellerSpider(scrapy.Spider):
         for i,product in enumerate(response.xpath('//div[contains(@id, "gridItemRoot")]')):
             item = AmazonBestSellerItem()
             item['asin'] = product.xpath(f'//*[@id="p13n-asin-index-{i}"]/div/@data-asin').get()
-            item['rank'] = product.xpath(f'//*[@data-asin="{item['asin'] }"]/div[1]/div[1]/span/text()').get()
+            item['rank'] = int(product.xpath(f'//*[@data-asin="{item['asin'] }"]/div[1]/div[1]/span/text()').get().replace('#',''))
             item['productName'] = product.xpath(f'//*[@id="{item['asin']}"]/div/div/a/span/div/text()').get()
             item['productUrl'] = f'https://www.amazon.in/dp/{item['asin'] }'
             item['category'] = category
