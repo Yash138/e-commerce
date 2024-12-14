@@ -1,5 +1,7 @@
 import pymongo
+from pymongo import UpdateOne
 from Ecommerce_Scraper.settings import MONGO_DATABASE, MONGO_URI
+# from settings import MONGO_DATABASE, MONGO_URI
 
 
 class MongoDBHandler:
@@ -45,10 +47,25 @@ class MongoDBHandler:
 
     def update_one(self, collection_name, query, update, upsert=False):
         """
-        Update a single document in the specified collection.
+        Update/Insert a single document in the specified collection.
         """
         self.connect()
         return self.db[collection_name].update_one(query, {"$set": update}, upsert=upsert)
+    
+    def bulk_upsert(self, collection_name, df, filter_cols:list=['_id'], upsert=True):
+        """
+        Update/Insert many documents in the specified collection.
+        """
+        self.connect()
+        operations = [
+            UpdateOne(
+                {col:row[col] for col in filter_cols},
+                {'$set':row.to_dict()},
+                upsert=upsert
+            )
+            for _, row in df.iterrows()
+        ]
+        return self.db[collection_name].bulk_write(operations)
 
     def find(self, collection_name, query=None, projection=None):
         """
@@ -88,3 +105,11 @@ def getCategoryUrls():
     # print(list(results_category),list(results_subCategory))
     results = list(results_category)+list(results_subCategory)
     return results if results else []
+
+def remove_suffixes(df, *args):
+    for i in args:
+        df = df.rename(columns={col: col.replace(i,'') for col in df.columns})
+    return df
+
+def add_suffixes(df, suffix):
+    return df.rename(columns={col: col+suffix for col in df.columns})
