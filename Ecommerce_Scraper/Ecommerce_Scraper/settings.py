@@ -58,7 +58,7 @@ DOWNLOADER_MIDDLEWARES = {
 
 RETRY_ENABLED = True
 RETRY_TIMES = 3  # Number of retries for a failed request
-RETRY_DELAY = 2  # Initial delay of 2 seconds
+RETRY_DELAY = 0.25  # Initial delay of 2 seconds
 RETRY_HTTP_CODES = [500, 502, 503, 504, 408]  # Retry on server-side issues
 
 # Enable or disable extensions

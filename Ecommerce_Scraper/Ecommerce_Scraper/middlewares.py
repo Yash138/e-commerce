@@ -108,7 +108,7 @@ class EcommerceScraperDownloaderMiddleware:
 class ExponentialBackoffRetryMiddleware(RetryMiddleware):
     def __init__(self, settings):
         super().__init__(settings)
-        self.base_delay = settings.getfloat('RETRY_DELAY', 0.25)  # Base delay
+        self.base_delay = settings.getfloat('RETRY_DELAY', 2)  # Base delay
 
     def _retry(self, request, reason, spider):
         retries = request.meta.get('retry_times', 0)
