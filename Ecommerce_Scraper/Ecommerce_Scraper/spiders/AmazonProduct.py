@@ -22,7 +22,7 @@ class AmazonProductSpider(scrapy.Spider):
         item['asin'] = response.url.split('/dp/')[-1]
         item['productName'] = response.xpath('//*[@id="productTitle"]/text()').get()
         item['productUrl'] = response.url
-        item['rating'] = response.xpath('//*[@id="averageCustomerReviews"]/span[1]/span[1]/span/a/span/text()').get()
+        item['rating'] = response.xpath('//*[@id="averageCustomerReviews"]/span[1]/span[1]/span[1]/a/span/text()').get()
         item['reviewsCount'] = response.xpath('//*[@id="averageCustomerReviews"]/span[3]/a/span/text()').get()
         item['sellerName'] = response.xpath(
                 '//*[@id="bylineInfo_feature_div"]/div[1]/a/text() | '

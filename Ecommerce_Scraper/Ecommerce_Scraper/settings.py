@@ -51,10 +51,10 @@ ROBOTSTXT_OBEY = True
 
 # Enable or disable downloader middlewares
 # See https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
-DOWNLOADER_MIDDLEWARES = {
-   # "Ecommerce_Scraper.middlewares.EcommerceScraperDownloaderMiddleware": 543,
-    'Ecommerce_Scraper.middlewares.ExponentialBackoffRetryMiddleware': 550,
-}
+# DOWNLOADER_MIDDLEWARES = {
+#    # "Ecommerce_Scraper.middlewares.EcommerceScraperDownloaderMiddleware": 543,
+#     'Ecommerce_Scraper.middlewares.ExponentialBackoffRetryMiddleware': 550,
+# }
 
 RETRY_ENABLED = True
 RETRY_TIMES = 3  # Number of retries for a failed request
