@@ -25,7 +25,8 @@ ROBOTSTXT_OBEY = True
 # Configure a delay for requests for the same website (default: 0)
 # See https://docs.scrapy.org/en/latest/topics/settings.html#download-delay
 # See also autothrottle settings and docs
-#DOWNLOAD_DELAY = 3
+# DOWNLOAD_DELAY = 0.5   # Delay of 3 seconds between requests
+# RANDOMIZE_DOWNLOAD_DELAY = True  # Add random delays to mimic human behavior
 # The download delay setting will honor only one of:
 #CONCURRENT_REQUESTS_PER_DOMAIN = 16
 #CONCURRENT_REQUESTS_PER_IP = 16
@@ -50,9 +51,15 @@ ROBOTSTXT_OBEY = True
 
 # Enable or disable downloader middlewares
 # See https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
-#DOWNLOADER_MIDDLEWARES = {
-#    "Ecommerce_Scraper.middlewares.EcommerceScraperDownloaderMiddleware": 543,
-#}
+DOWNLOADER_MIDDLEWARES = {
+   # "Ecommerce_Scraper.middlewares.EcommerceScraperDownloaderMiddleware": 543,
+    'Ecommerce_Scraper.middlewares.ExponentialBackoffRetryMiddleware': 550,
+}
+
+RETRY_ENABLED = True
+RETRY_TIMES = 3  # Number of retries for a failed request
+RETRY_DELAY = 2  # Initial delay of 2 seconds
+RETRY_HTTP_CODES = [500, 502, 503, 504, 408]  # Retry on server-side issues
 
 # Enable or disable extensions
 # See https://docs.scrapy.org/en/latest/topics/extensions.html
@@ -63,7 +70,8 @@ ROBOTSTXT_OBEY = True
 # Configure item pipelines
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
-   "Ecommerce_Scraper.pipelines.AmazonBSStagingPipeline": 300,
+   # "Ecommerce_Scraper.pipelines.AmazonBSStagingPipeline": 300,
+   "Ecommerce_Scraper.pipelines.AmazonProductScraperPipeline": 300,
 }
 
 # Enable and configure the AutoThrottle extension (disabled by default)

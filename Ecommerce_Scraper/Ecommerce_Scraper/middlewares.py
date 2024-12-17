@@ -8,6 +8,9 @@ from scrapy import signals
 # useful for handling different item types with a single interface
 from itemadapter import is_item, ItemAdapter
 
+import time
+from scrapy.downloadermiddlewares.retry import RetryMiddleware
+
 
 class EcommerceScraperSpiderMiddleware:
     # Not all methods need to be defined. If a method is not defined,
@@ -101,3 +104,16 @@ class EcommerceScraperDownloaderMiddleware:
 
     def spider_opened(self, spider):
         spider.logger.info("Spider opened: %s" % spider.name)
+
+class ExponentialBackoffRetryMiddleware(RetryMiddleware):
+    def __init__(self, settings):
+        super().__init__(settings)
+        self.base_delay = settings.getfloat('RETRY_DELAY', 0.25)  # Base delay
+
+    def _retry(self, request, reason, spider):
+        retries = request.meta.get('retry_times', 0)
+        delay = self.base_delay * (2 ** retries)  # Exponential backoff
+        spider.logger.info(f"Retrying {request.url} ({retries + 1}) - Delaying for {delay:.2f} seconds")
+        time.sleep(delay)  # Delay before retrying
+        
+        return super()._retry(request, reason, spider)

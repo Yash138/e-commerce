@@ -60,7 +60,7 @@ class MongoDBHandler:
         operations = [
             UpdateOne(
                 {col:row[col] for col in filter_cols},
-                {'$set':row.to_dict()},
+                {'$set':{k:v for k,v in row.to_dict().items() if k not in filter_cols}},
                 upsert=upsert
             )
             for _, row in df.iterrows()
@@ -113,3 +113,12 @@ def remove_suffixes(df, *args):
 
 def add_suffixes(df, suffix):
     return df.rename(columns={col: col+suffix for col in df.columns})
+
+def getUrlToScrap():
+    mongo_handler = MongoDBHandler(MONGO_URI, MONGO_DATABASE)
+    urls = mongo_handler.find(
+        "trf_amz__best_sellers", 
+        {'isLatest':True},
+        {'productUrl':1, '_id':0}
+    )
+    return list(urls)
