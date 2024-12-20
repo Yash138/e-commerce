@@ -6,7 +6,7 @@
 import scrapy
 
 
-class AmazonBestSellerItem(scrapy.Item):
+class AmazonBestSellerMongoItem(scrapy.Item):
     # define the fields for your item here like:
     # name = scrapy.Field()
     asin = scrapy.Field()
@@ -17,7 +17,7 @@ class AmazonBestSellerItem(scrapy.Item):
     productUrl = scrapy.Field()
     loadTimestamp = scrapy.Field()
     
-class AmazonProductItem(scrapy.Item):
+class AmazonProductMongoItem(scrapy.Item):
     asin = scrapy.Field()
     productName = scrapy.Field()
     lowestCategory = scrapy.Field()
@@ -34,4 +34,30 @@ class AmazonProductItem(scrapy.Item):
     lowestCategoryUrl = scrapy.Field()
     loadTimestamp = scrapy.Field()
 
-
+class AmazonBestSellerItem(scrapy.Item):
+    # define the fields for your item here like:
+    # name = scrapy.Field()
+    asin = scrapy.Field()
+    rank = scrapy.Field()
+    product_name = scrapy.Field()
+    category = scrapy.Field()
+    sub_category = scrapy.Field()
+    product_url = scrapy.Field()
+    load_timestamp = scrapy.Field()
+    
+class AmazonProductItem(scrapy.Item):
+    asin = scrapy.Field()
+    product_name = scrapy.Field()
+    lowest_category = scrapy.Field()
+    last_month_sale = scrapy.Field()
+    rating = scrapy.Field()
+    reviews_count = scrapy.Field()
+    sell_mrp = scrapy.Field()
+    sell_price = scrapy.Field()
+    seller_name = scrapy.Field()
+    launch_date = scrapy.Field()
+    product_url = scrapy.Field()
+    reviews_url = scrapy.Field()
+    seller_store_url = scrapy.Field()
+    lowest_category_url = scrapy.Field()
+    load_timestamp = scrapy.Field()
