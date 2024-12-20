@@ -3,6 +3,7 @@ from pymongo import UpdateOne
 import psycopg2
 from scrapy.utils.project import get_project_settings
 from psycopg2.extras import RealDictCursor, execute_values
+import re
 
 # from settings import MONGO_DATABASE, MONGO_URI
 
@@ -373,3 +374,24 @@ def getUrlToScrap(db:'mongo | postgres'='mongo'):
                 where asin not in (select distinct asin from staging.stg_amz__product_details)
             """
         )
+
+def extract_numeric_part(value):
+    if isinstance(value, str):
+        # extract the numeric part
+        x = [i for i in value.split(' ') if re.search(r'\d', i)]
+        if len(x) > 1:
+            raise Exception(f"Expected One Numeric Part, got {len(x)}:{x}")
+        # remove any special character exclude: decimal and alphanumeric letters
+        if x:
+            x = re.sub(r'[^a-zA-Z0-9\s\.]', '', x[0]).lower()
+            if x[-1] == 'k':
+                x = float(x.replace('k',''))*1000
+            elif x[-1] == 'l':
+                x = float(x.replace('l',''))*1_000_000
+            else:
+                x = float(x)
+            return x
+        return None
+    
+def safe_strip(value):
+    return value.strip() if isinstance(value, str) else value
