@@ -168,13 +168,6 @@ class PostgresDBHandler:
             print(f"Error reading from {table}: {e}")
             raise
 
-def getCategoryUrls():
-    mongo_handler = MongoDBHandler(MONGO_URI, MONGO_DATABASE)
-    results_category = mongo_handler.find(
-        "amz__product_category", 
-        {'IsActive':True},
-        {'Category':1, 'SubCategory':{'$literal':''}, 'Url':1, '_id':0}
-    )
     def update(self, table, data, conditions):
         """
         Update records in the specified table.
@@ -211,14 +204,7 @@ def getCategoryUrls():
         if not data:
             raise ValueError("No data provided for upsert.")
 
-    results_subCategory = mongo_handler.find(
-        "amz__product_subcategory", 
-        {'IsActive':True},
-        {'Category':1, 'SubCategory':1, 'Url':1, '_id':0}
-    )
-    # print(list(results_category),list(results_subCategory))
-    results = list(results_category)+list(results_subCategory)
-    return results if results else []
+        # Generate the SQL parts dynamically
         columns = data[0].keys()  # Assume all rows have the same keys
         column_list = ", ".join(columns)
         value_placeholders = ", ".join([f"%({col})s" for col in columns])
@@ -303,6 +289,54 @@ def getCategoryUrls():
             print(f"Error deleting from {table}: {e}")
             raise
 
+def getCategoryUrls(db='mongo'):
+    settings = get_project_settings()
+    if db == 'mongo':
+        mongo_handler = MongoDBHandler(
+            settings.get('MONGO_URI'),
+            settings.get('MONGO_DATABASE'))
+        results_category = mongo_handler.find(
+            "amz__product_category", 
+            {'IsActive':True},
+            {'Category':1, 'SubCategory':{'$literal':''}, 'Url':1, '_id':0}
+        )
+
+        results_subCategory = mongo_handler.find(
+            "amz__product_subcategory", 
+            {'IsActive':True},
+            {'Category':1, 'SubCategory':1, 'Url':1, '_id':0}
+        )
+        # print(list(results_category),list(results_subCategory))
+        results = list(results_category)+list(results_subCategory)
+        return results if results else []
+    elif db == 'postgres':
+        postgres_handler = PostgresDBHandler(
+                settings.get('POSTGRES_HOST'),
+                settings.get('POSTGRES_DATABASE'),
+                settings.get('POSTGRES_USERNAME'),
+                settings.get('POSTGRES_PASSWORD'),
+                settings.get('POSTGRES_PORT'),
+            )
+        postgres_handler.connect()
+        if settings.get('LOAD_TYPE') == 'INCREMENTAL':
+            return postgres_handler.execute(
+                """
+                SELECT category, '' as sub_category, url FROM processed.amz__product_category 
+                WHERE is_active = true AND cast(last_refreshed_timestamp as date) < CURRENT_DATE
+                UNION
+                SELECT category, sub_category, url FROM processed.amz__product_subcategory 
+                WHERE is_active = true AND cast(last_refreshed_timestamp as date) < CURRENT_DATE
+                """
+            )
+        elif settings.get('LOAD_TYPE') == 'FULLREFRESH':
+            return postgres_handler.execute(
+                """
+                select category, '' as sub_category, url from processed.amz__product_category WHERE is_active = true
+                union 
+                select category, sub_category, url from processed.amz__product_subcategory WHERE is_active = true
+                """
+            )   
+        
 def remove_suffixes(df, *args):
     for i in args:
         df = df.rename(columns={col: col.replace(i,'') for col in df.columns})
@@ -311,11 +345,31 @@ def remove_suffixes(df, *args):
 def add_suffixes(df, suffix):
     return df.rename(columns={col: col+suffix for col in df.columns})
 
-def getUrlToScrap():
-    mongo_handler = MongoDBHandler(MONGO_URI, MONGO_DATABASE)
-    urls = mongo_handler.find(
-        "trf_amz__best_sellers", 
-        {'isLatest':True},
-        {'productUrl':1, '_id':0}
-    )
-    return list(urls)
+def getUrlToScrap(db:'mongo | postgres'='mongo'):
+    settings = get_project_settings()
+    if db == 'mongo':
+        mongo_handler = MongoDBHandler(
+            settings.get('MONGO_URI'),
+            settings.get('MONGO_DATABASE'))
+        urls = mongo_handler.find(
+            "trf_amz__best_sellers", 
+            {'isLatest':True},
+            {'productUrl':1, '_id':0}
+        )
+        return list(urls)
+    elif db == 'postgres':
+        postgres_handler = PostgresDBHandler(
+                settings.get('POSTGRES_HOST'),
+                settings.get('POSTGRES_DATABASE'),
+                settings.get('POSTGRES_USERNAME'),
+                settings.get('POSTGRES_PASSWORD'),
+                settings.get('POSTGRES_PORT'),
+            )
+        postgres_handler.connect()
+        return postgres_handler.execute(
+            """
+                select distinct product_url 
+                from processed.amz__best_sellers 
+                where asin not in (select distinct asin from staging.stg_amz__product_details)
+            """
+        )
