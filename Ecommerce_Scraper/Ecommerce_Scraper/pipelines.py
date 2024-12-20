@@ -6,8 +6,9 @@
 
 # useful for handling different item types with a single interface
 from itemadapter import ItemAdapter
-from Ecommerce_Scraper.utility import MongoDBHandler, PostgresDBHandler, add_suffixes, remove_suffixes
+from Ecommerce_Scraper.utility import MongoDBHandler, PostgresDBHandler, add_suffixes, remove_suffixes, extract_numeric_part, safe_strip
 import pandas as pd
+from datetime import datetime as dt
 
 class EcommerceScraperPipeline:
     def process_item(self, item, spider):
@@ -90,8 +91,8 @@ class AmazonBSStagingPipeline:
         """
         Called when the spider is closed.
         """
-        self.postgres_handler.execute('call processed.sp_process_best_seller();', type='procedure')
-        self.postgres_handler.execute('call processed.sp_update_master_tables();', type='procedure')
+        self.postgres_handler.execute('call curated.sp_process_best_seller();', type='procedure')
+        self.postgres_handler.execute('call curated.sp_update_master_tables();', type='procedure')
         self.postgres_handler.close()
 
     def process_item(self, item, spider):
@@ -254,6 +255,60 @@ class AmazonProductStagePipeline:
         """
         Process each item and insert it into the MongoDB collection.
         """
-        table_name = getattr(spider, 'table_name')
+        table_name = getattr(spider, 'stg_table_name')
         self.postgres_handler.insert(table_name, dict(item))
         return item
+    
+
+
+class AmazonProductTransformPipeline:
+    def __init__(self, postgres_handler):
+        """
+        Initialize the pipeline with MongoDB connection details.
+        """
+        self.postgres_handler = postgres_handler
+
+    @classmethod
+    def from_crawler(cls, crawler):
+        """
+        Access settings from Scrapy's configuration.
+        """
+        postgres_handler = PostgresDBHandler(
+                crawler.settings.get('POSTGRES_HOST'),
+                crawler.settings.get('POSTGRES_DATABASE'),
+                crawler.settings.get('POSTGRES_USERNAME'),
+                crawler.settings.get('POSTGRES_PASSWORD'),
+                crawler.settings.get('POSTGRES_PORT')
+            )
+        return cls(postgres_handler)
+    
+    def open_spider(self, spider):
+        """
+        Called when the spider is opened.
+        """
+        self.postgres_handler.connect()
+    
+    def close_spider(self, spider):
+        """
+        Called when the spider is closed.
+        """
+        self.postgres_handler.close()
+
+    def process_item(self, item, spider):
+        """
+        Process each item and insert it into the MongoDB collection.
+        """
+        # clean the item
+        item = {k:safe_strip(v) for k,v in item.items()}
+        item['last_month_sale'] = extract_numeric_part(item['last_month_sale'])
+        item['rating'] = extract_numeric_part(item['rating'])
+        item['reviews_count'] = extract_numeric_part(item['reviews_count'])
+        item['sell_mrp'] = extract_numeric_part(item['sell_mrp'])
+        item['sell_price'] = extract_numeric_part(item['sell_price'])
+        if item['launch_date']:
+            item['launch_date'] = dt.strptime(item['launch_date'], "%d %B %Y")
+        
+        table_name = getattr(spider, 'trf_table_name')
+        self.postgres_handler.insert(table_name, dict(item))
+        return item
+    
