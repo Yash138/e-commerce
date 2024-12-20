@@ -70,8 +70,12 @@ RETRY_HTTP_CODES = [500, 502, 503, 504, 408]  # Retry on server-side issues
 # Configure item pipelines
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
+   # "Ecommerce_Scraper.pipelines.AmazonBSStagingMongoPipeline": 300,
+   # "Ecommerce_Scraper.pipelines.AmazonProductScraperMongoPipeline": 300,
+   
    # "Ecommerce_Scraper.pipelines.AmazonBSStagingPipeline": 300,
-   "Ecommerce_Scraper.pipelines.AmazonProductScraperPipeline": 300,
+   "Ecommerce_Scraper.pipelines.AmazonProductStagePipeline": 300,
+   "Ecommerce_Scraper.pipelines.AmazonProductTransformPipeline": 400,
 }
 
 # Enable and configure the AutoThrottle extension (disabled by default)
@@ -102,3 +106,12 @@ FEED_EXPORT_ENCODING = "utf-8"
 # MongoDB Connection Details
 MONGO_URI = "mongodb://localhost:27017"
 MONGO_DATABASE = "ecommerce"
+
+# PostgreSQL DB Connection Details
+POSTGRES_HOST = 'localhost'
+POSTGRES_DATABASE = 'ecommerce'
+POSTGRES_USERNAME = 'postgres'
+POSTGRES_PASSWORD = 'hsV6.sfi2'
+POSTGRES_PORT = '5432'
+
+LOAD_TYPE = 'FULLREFRESH'  # possible values: FULLREFRESH | INCREMENTAL

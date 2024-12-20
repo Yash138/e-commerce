@@ -1,6 +1,7 @@
 import scrapy
 from Ecommerce_Scraper.items import AmazonProductMongoItem, AmazonProductItem
 from Ecommerce_Scraper.utility import getUrlToScrap
+from datetime import datetime as dt
 
 # class AmazonProductSpider(scrapy.Spider):
 #     name = "AmazonProduct"
@@ -59,7 +60,8 @@ from Ecommerce_Scraper.utility import getUrlToScrap
 class AmazonProductSpider(scrapy.Spider):
     name = "AmazonProduct"
     allowed_domains = ["www.amazon.in"]
-    table_name = 'staging.stg_amz__product_details'
+    stg_table_name = 'staging.stg_amz__product_details'
+    trf_table_name = 'transformed.amz__product_details'
     # start_urls = ["https://www.amazon.in/dp/B091V8HK8Z"]
 
     def start_requests(self):
@@ -101,5 +103,5 @@ class AmazonProductSpider(scrapy.Spider):
                 '//th[contains(text(), "Date First Available")]/../td/text() | '
                 '//span[contains(text(), "Date First Available")]/../span[2]/text()'
             ).get()
-        
+        item['load_timestamp'] = dt.now()
         yield item
