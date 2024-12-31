@@ -61,7 +61,7 @@ class AmazonProductSpider(scrapy.Spider):
     name = "AmazonProduct"
     allowed_domains = ["www.amazon.in"]
     stg_table_name = 'staging.stg_amz__product_details'
-    trf_table_name = 'transformed.amz__product_details'
+    trf_table_name = 'transformed.trf_amz__product_details'
     # start_urls = ["https://www.amazon.in/dp/B091V8HK8Z"]
 
     def start_requests(self):
