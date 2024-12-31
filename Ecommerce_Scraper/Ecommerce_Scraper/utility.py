@@ -319,22 +319,22 @@ def getCategoryUrls(db='mongo'):
                 settings.get('POSTGRES_PORT'),
             )
         postgres_handler.connect()
-        if settings.get('LOAD_TYPE') == 'INCREMENTAL':
+        if settings.get('BEST_SELLER_LOAD_TYPE') == 'INCREMENTAL':
             return postgres_handler.execute(
                 """
-                SELECT category, '' as sub_category, url FROM processed.amz__product_category 
+                SELECT category, '' as sub_category, url FROM curated.amz__product_category 
                 WHERE is_active = true AND cast(last_refreshed_timestamp as date) < CURRENT_DATE
                 UNION
-                SELECT category, sub_category, url FROM processed.amz__product_subcategory 
+                SELECT category, sub_category, url FROM curated.amz__product_subcategory 
                 WHERE is_active = true AND cast(last_refreshed_timestamp as date) < CURRENT_DATE
                 """
             )
-        elif settings.get('LOAD_TYPE') == 'FULLREFRESH':
+        elif settings.get('BEST_SELLER_LOAD_TYPE') == 'FULLREFRESH':
             return postgres_handler.execute(
                 """
-                select category, '' as sub_category, url from processed.amz__product_category WHERE is_active = true
+                select category, '' as sub_category, url from curated.amz__product_category WHERE is_active = true
                 union 
-                select category, sub_category, url from processed.amz__product_subcategory WHERE is_active = true
+                select category, sub_category, url from curated.amz__product_subcategory WHERE is_active = true
                 """
             )   
         
@@ -367,13 +367,21 @@ def getUrlToScrap(db:'mongo | postgres'='mongo'):
                 settings.get('POSTGRES_PORT'),
             )
         postgres_handler.connect()
-        return postgres_handler.execute(
-            """
+        if settings.get('PRODUCT_LOAD_TYPE') == 'INCREMENTAL':
+            return postgres_handler.execute(
+                """
                 select distinct product_url 
-                from processed.amz__best_sellers 
-                where asin not in (select distinct asin from staging.stg_amz__product_details)
-            """
-        )
+                from curated.amz__best_sellers 
+                where asin not in (select distinct asin from curated.amz__product_details where is_latest is True)
+                """
+            )
+        elif settings.get('PRODUCT_LOAD_TYPE') == 'FULLREFRESH':
+            return postgres_handler.execute(
+                """
+                select distinct product_url 
+                from curated.amz__best_sellers 
+                """
+            )
 
 def extract_numeric_part(value):
     if isinstance(value, str):
@@ -381,7 +389,7 @@ def extract_numeric_part(value):
         x = [i for i in value.split(' ') if re.search(r'\d', i)]
         if len(x) > 1:
             raise Exception(f"Expected One Numeric Part, got {len(x)}:{x}")
-        # remove any special character exclude: decimal and alphanumeric letters
+        # remove special characters, exclude: decimal and alphanumeric letters
         if x:
             x = re.sub(r'[^a-zA-Z0-9\s\.]', '', x[0]).lower()
             if x[-1] == 'k':
