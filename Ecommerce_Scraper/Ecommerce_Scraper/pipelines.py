@@ -244,6 +244,9 @@ class AmazonProductStagePipeline:
         Called when the spider is opened.
         """
         self.postgres_handler.connect()
+        table_name = getattr(spider, 'stg_table_name')
+        # clean the stage table
+        self.postgres_handler.delete(table_name, '1=1')
     
     def close_spider(self, spider):
         """
@@ -292,6 +295,7 @@ class AmazonProductTransformPipeline:
         """
         Called when the spider is closed.
         """
+        self.postgres_handler.execute('call curated.sp_process_amazon_products();', type='procedure')
         self.postgres_handler.close()
 
     def process_item(self, item, spider):
