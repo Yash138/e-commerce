@@ -62,11 +62,17 @@ class AmazonProductSpider(scrapy.Spider):
     allowed_domains = ["www.amazon.in"]
     stg_table_name = 'staging.stg_amz__product_details'
     trf_table_name = 'transformed.trf_amz__product_details'
+    custom_settings = {
+        "ITEM_PIPELINES" : {
+            "Ecommerce_Scraper.pipelines.AmazonProductStagePipeline": 200,
+            "Ecommerce_Scraper.pipelines.AmazonProductTransformPipeline": 300
+        }
+    }
     # start_urls = ["https://www.amazon.in/dp/B091V8HK8Z"]
 
     def start_requests(self):
         for url in getUrlToScrap('postgres'):
-            yield scrapy.Request(url['product_url'], callback=self.parse)
+            yield scrapy.Request(url['product_url'], callback=self.parse)     # , meta={'dont_redirect':True, "handle_httpstatus_list": [301]}
     
     def parse(self, response):
         item = AmazonProductItem()

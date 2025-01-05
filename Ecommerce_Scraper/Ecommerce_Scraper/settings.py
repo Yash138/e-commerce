@@ -79,9 +79,9 @@ ITEM_PIPELINES = {
    # "Ecommerce_Scraper.pipelines.AmazonBSStagingMongoPipeline": 300,
    # "Ecommerce_Scraper.pipelines.AmazonProductScraperMongoPipeline": 300,
    
-   # "Ecommerce_Scraper.pipelines.AmazonBSStagingPipeline": 300,
-   "Ecommerce_Scraper.pipelines.AmazonProductStagePipeline": 300,
-   "Ecommerce_Scraper.pipelines.AmazonProductTransformPipeline": 400,
+   "Ecommerce_Scraper.pipelines.AmazonBSStagingPipeline": 100,
+   "Ecommerce_Scraper.pipelines.AmazonProductStagePipeline": 200,
+   "Ecommerce_Scraper.pipelines.AmazonProductTransformPipeline": 300,
 }
 
 # Enable and configure the AutoThrottle extension (disabled by default)
@@ -120,5 +120,5 @@ POSTGRES_USERNAME = 'postgres'
 POSTGRES_PASSWORD = 'hsV6.sfi2'
 POSTGRES_PORT = '5432'
 
-BEST_SELLER_LOAD_TYPE = 'FULLREFRESH'  # possible values: FULLREFRESH | INCREMENTAL
+BEST_SELLER_LOAD_TYPE = 'INCREMENTAL'  # possible values: FULLREFRESH | INCREMENTAL
 PRODUCT_LOAD_TYPE = 'INCREMENTAL'  # possible values: FULLREFRESH | INCREMENTAL

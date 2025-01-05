@@ -39,6 +39,11 @@ class AmazonBestSellerSpider(scrapy.Spider):
     name = "AmazonBestSeller"
     allowed_domains = ["www.amazon.in"]
     table_name = 'staging.stg_amz__best_sellers'
+    custom_settings = {
+        "ITEM_PIPELINES" : {
+            "Ecommerce_Scraper.pipelines.AmazonBSStagingPipeline": 100
+        }
+    }
         
     def start_requests(self):
         self.category_urls_dict = {i['url']:i for i in getCategoryUrls(db='postgres')}
