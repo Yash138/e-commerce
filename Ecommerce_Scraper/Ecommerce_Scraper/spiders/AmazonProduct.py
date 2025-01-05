@@ -95,10 +95,11 @@ class AmazonProductSpider(scrapy.Spider):
                 '//th[contains(text(), "Best Sellers Rank")]/following-sibling::td/span/span[2]/a/text() | '
                 '//span[contains(text(), "Best Sellers Rank")]/../ul/li/span/a/text()'
             ).get()
-        item['lowest_category_url'] = response.urljoin(response.xpath(
+        item['lowest_category_bs_url'] = response.urljoin(response.xpath(
                 '//th[contains(text(), "Best Sellers Rank")]/following-sibling::td/span/span[2]/a/@href | '
                 '//span[contains(text(), "Best Sellers Rank")]/../ul/li/span/a/@href'
             ).get())
+        item['lowest_category_products_url'] = response.urljoin(response.xpath('//*[contains(@id, "wayfinding-breadcrumbs")]/ul/li[last()]/span/a/@href').get())
         item['launch_date'] = response.xpath(
                 '//th[contains(text(), "Date First Available")]/../td/text() | '
                 '//span[contains(text(), "Date First Available")]/../span[2]/text()'

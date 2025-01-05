@@ -59,5 +59,6 @@ class AmazonProductItem(scrapy.Item):
     product_url = scrapy.Field()
     reviews_url = scrapy.Field()
     seller_store_url = scrapy.Field()
-    lowest_category_url = scrapy.Field()
+    lowest_category_bs_url = scrapy.Field()
+    lowest_category_products_url = scrapy.Field()
     load_timestamp = scrapy.Field()
