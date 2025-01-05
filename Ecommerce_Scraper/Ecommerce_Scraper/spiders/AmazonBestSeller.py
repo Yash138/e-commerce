@@ -46,14 +46,20 @@ class AmazonBestSellerSpider(scrapy.Spider):
     }
         
     def start_requests(self):
-        self.category_urls_dict = {i['url']:i for i in getCategoryUrls(db='postgres')}
-        self.start_urls = list(self.category_urls_dict.keys())
+        category_urls_dict = {i['url']:i for i in getCategoryUrls(db='postgres')}
+        self.start_urls = list(category_urls_dict.keys())
         for url in self.start_urls:
-            yield scrapy.Request(url, callback=self.parse)
+            yield scrapy.Request(
+                url, 
+                callback=self.parse,
+                meta= {
+                    "category_urls_dict":category_urls_dict
+                }
+            )
 
     def parse(self, response):
-        category = self.category_urls_dict[response.url.split('/ref')[0]]['category']           # split the URL from ref - will work in case of Page 2 url
-        subCategory = self.category_urls_dict[response.url.split('/ref')[0]]['sub_category']     # split the URL from ref - will work in case of Page 2 url
+        category = response.meta['category_urls_dict'][response.url.split('/ref')[0]]['category']           # split the URL from ref - will work in case of Page 2 url
+        subCategory = response.meta['category_urls_dict'][response.url.split('/ref')[0]]['sub_category']     # split the URL from ref - will work in case of Page 2 url
         for i,product in enumerate(response.xpath('//div[contains(@id, "gridItemRoot")]')):
             item = AmazonBestSellerItem()
             item['asin'] = product.xpath(f'//*[@id="p13n-asin-index-{i}"]/div/@data-asin').get()
@@ -68,5 +74,11 @@ class AmazonBestSellerSpider(scrapy.Spider):
         next_page = response.css("li.a-last > a::attr(href)").get()
         if next_page:
             next_page_url = response.urljoin(next_page)
-            yield scrapy.Request(url=next_page_url, callback=self.parse)
+            yield scrapy.Request(
+                url=next_page_url, 
+                callback=self.parse,
+                meta= {
+                    "category_urls_dict":response.meta['category_urls_dict']
+                }
+            )
             

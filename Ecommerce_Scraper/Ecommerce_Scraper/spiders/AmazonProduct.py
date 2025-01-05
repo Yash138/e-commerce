@@ -66,6 +66,10 @@ class AmazonProductSpider(scrapy.Spider):
         "ITEM_PIPELINES" : {
             "Ecommerce_Scraper.pipelines.AmazonProductStagePipeline": 200,
             "Ecommerce_Scraper.pipelines.AmazonProductTransformPipeline": 300
+        },
+        "DOWNLOADER_MIDDLEWARES" : {
+            'scrapy.downloadermiddlewares.useragent.UserAgentMiddleware': None,
+            'scrapy_user_agents.middlewares.RandomUserAgentMiddleware': 400,
         }
     }
     # start_urls = ["https://www.amazon.in/dp/B091V8HK8Z"]
