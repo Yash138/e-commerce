@@ -90,3 +90,10 @@ ROBOTSTXT_OBEY = True
 # Set settings whose default value is deprecated to a future-proof value
 TWISTED_REACTOR = "twisted.internet.asyncioreactor.AsyncioSelectorReactor"
 FEED_EXPORT_ENCODING = "utf-8"
+
+# PostgreSQL DB Connection Details
+POSTGRES_HOST = 'localhost'
+POSTGRES_DATABASE = 'ecommerce'
+POSTGRES_USERNAME = 'postgres'
+POSTGRES_PASSWORD = 'hsV6.sfi2'
+POSTGRES_PORT = '5432'
