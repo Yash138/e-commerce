@@ -1,0 +1,12 @@
+name: venv_scrapy_amazon
+channels:
+  - defaults
+dependencies:
+  - python=3.10
+  - ipykernel
+  - conda-forge::scrapy
+  # - conda-forge::pymongo
+  - pandas
+  - anaconda::psycopg2
+  - conda-forge::asyncpg
+prefix: C:\Users\Yash Varshney\.conda\envs\venv_scrapy_amazon
