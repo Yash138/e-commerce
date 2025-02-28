@@ -1,7 +1,7 @@
 import scrapy
 from scrapy.http import Request
 import json
-from Amazon_Scraper.helpers.utils import find_key_path
+from Amazon_Scraper.helpers.utils import find_key_path, extract_paths
 
 class CategoryrefreshSpider(scrapy.Spider):
     name = "CategoryRefresh"
@@ -81,13 +81,3 @@ class CategoryrefreshSpider(scrapy.Spider):
         """Save categories to JSON when spider finishes"""
         with open("categories_mapping.json", "w", encoding="utf-8") as f:
             json.dump(self.items, f, indent=4)
-        self.log("Saved all categories in categories.json")
-    
-    # def parse_item(self, response):
-    #     bs_category = response.meta.get("bs_category")
-    #     for category in response.xpath("//div[@role='treeitem']/a"):
-    #         yield {
-    #             'bs_category': bs_category,
-    #             "category": category.xpath("text()").get(),
-    #             "url": response.urljoin(category.xpath("@href").get()),
-    #         }
