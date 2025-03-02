@@ -6,7 +6,8 @@
 
 # useful for handling different item types with a single interface
 from itemadapter import ItemAdapter
-from Ecommerce_Scraper.utility import MongoDBHandler, PostgresDBHandler, add_suffixes, remove_suffixes, extract_numeric_part, safe_strip
+# from Ecommerce_Scraper.utility import MongoDBHandler
+from Ecommerce_Scraper.utility import PostgresDBHandler, add_suffixes, remove_suffixes, extract_numeric_part, safe_strip
 import pandas as pd
 from datetime import datetime as dt
 
@@ -14,47 +15,47 @@ class EcommerceScraperPipeline:
     def process_item(self, item, spider):
         return item
 
-class AmazonBSStagingMongoPipeline:
-    def __init__(self, mongo_uri, mongo_db):
-        """
-        Initialize the pipeline with MongoDB connection details.
-        """
-        self.mongo_handler = MongoDBHandler(mongo_uri, mongo_db)
+# class AmazonBSStagingMongoPipeline:
+#     def __init__(self, mongo_uri, mongo_db):
+#         """
+#         Initialize the pipeline with MongoDB connection details.
+#         """
+#         self.mongo_handler = MongoDBHandler(mongo_uri, mongo_db)
 
-    @classmethod
-    def from_crawler(cls, crawler):
-        """
-        Access settings from Scrapy's configuration.
-        """
-        return cls(
-            mongo_uri=crawler.settings.get("MONGO_URI"),
-            mongo_db=crawler.settings.get("MONGO_DATABASE")
-        )
+#     @classmethod
+#     def from_crawler(cls, crawler):
+#         """
+#         Access settings from Scrapy's configuration.
+#         """
+#         return cls(
+#             mongo_uri=crawler.settings.get("MONGO_URI"),
+#             mongo_db=crawler.settings.get("MONGO_DATABASE")
+#         )
 
-    def open_spider(self, spider):
-        """
-        Called when the spider is opened.
-        """
-        self.mongo_handler.connect()
-        collection_name = getattr(spider, 'collection_name')
-        # clean the stage table
-        self.mongo_handler.delete_many(collection_name, {})
+#     def open_spider(self, spider):
+#         """
+#         Called when the spider is opened.
+#         """
+#         self.mongo_handler.connect()
+#         collection_name = getattr(spider, 'collection_name')
+#         # clean the stage table
+#         self.mongo_handler.delete_many(collection_name, {})
 
-    def close_spider(self, spider):
-        """
-        Called when the spider is closed.
-        """
-        trf_pipeline = AmazonBSTransformationPipeline(self.mongo_handler)
-        trf_pipeline.transform_data()
-        self.mongo_handler.close()
+#     def close_spider(self, spider):
+#         """
+#         Called when the spider is closed.
+#         """
+#         trf_pipeline = AmazonBSTransformationPipeline(self.mongo_handler)
+#         trf_pipeline.transform_data()
+#         self.mongo_handler.close()
 
-    def process_item(self, item, spider):
-        """
-        Process each item and insert it into the MongoDB collection.
-        """
-        collection_name = getattr(spider, 'collection_name')
-        self.mongo_handler.insert_one(collection_name, dict(item))
-        return item
+#     def process_item(self, item, spider):
+#         """
+#         Process each item and insert it into the MongoDB collection.
+#         """
+#         collection_name = getattr(spider, 'collection_name')
+#         self.mongo_handler.insert_one(collection_name, dict(item))
+#         return item
 
 
 class AmazonBSStagingPipeline:

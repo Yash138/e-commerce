@@ -1,5 +1,5 @@
-import pymongo
-from pymongo import UpdateOne
+# import pymongo
+# from pymongo import UpdateOne
 import psycopg2
 from scrapy.utils.project import get_project_settings
 from psycopg2.extras import RealDictCursor, execute_values
@@ -8,89 +8,89 @@ import re
 # from settings import MONGO_DATABASE, MONGO_URI
 
 
-class MongoDBHandler:
-    def __init__(self, mongo_uri, mongo_db):
-        """
-        Initialize the MongoDBHandler with connection details.
-        """
-        self.mongo_uri = mongo_uri
-        self.mongo_db = mongo_db
-        self.client = None
-        self.db = None
+# class MongoDBHandler:
+#     def __init__(self, mongo_uri, mongo_db):
+#         """
+#         Initialize the MongoDBHandler with connection details.
+#         """
+#         self.mongo_uri = mongo_uri
+#         self.mongo_db = mongo_db
+#         self.client = None
+#         self.db = None
 
-    def connect(self):
-        """
-        Establish a connection to the MongoDB server.
-        """
-        if not self.client:
-            self.client = pymongo.MongoClient(self.mongo_uri)
-            self.db = self.client[self.mongo_db]
+#     def connect(self):
+#         """
+#         Establish a connection to the MongoDB server.
+#         """
+#         if not self.client:
+#             self.client = pymongo.MongoClient(self.mongo_uri)
+#             self.db = self.client[self.mongo_db]
     
-    def close(self):
-        """
-        Close the connection to the MongoDB server.
-        """
-        if self.client:
-            self.client.close()
-            self.client = None
-            self.db = None
+#     def close(self):
+#         """
+#         Close the connection to the MongoDB server.
+#         """
+#         if self.client:
+#             self.client.close()
+#             self.client = None
+#             self.db = None
 
-    def insert_one(self, collection_name, data):
-        """
-        Insert a single document into the specified collection.
-        """
-        self.connect()
-        return self.db[collection_name].insert_one(data)
+#     def insert_one(self, collection_name, data):
+#         """
+#         Insert a single document into the specified collection.
+#         """
+#         self.connect()
+#         return self.db[collection_name].insert_one(data)
 
-    def insert_many(self, collection_name, data_list):
-        """
-        Insert multiple documents into the specified collection.
-        """
-        self.connect()
-        return self.db[collection_name].insert_many(data_list)
+#     def insert_many(self, collection_name, data_list):
+#         """
+#         Insert multiple documents into the specified collection.
+#         """
+#         self.connect()
+#         return self.db[collection_name].insert_many(data_list)
 
-    def update_one(self, collection_name, query, update, upsert=False):
-        """
-        Update/Insert a single document in the specified collection.
-        """
-        self.connect()
-        return self.db[collection_name].update_one(query, {"$set": update}, upsert=upsert)
+#     def update_one(self, collection_name, query, update, upsert=False):
+#         """
+#         Update/Insert a single document in the specified collection.
+#         """
+#         self.connect()
+#         return self.db[collection_name].update_one(query, {"$set": update}, upsert=upsert)
     
-    def bulk_upsert(self, collection_name, df, filter_cols:list=['_id'], upsert=True):
-        """
-        Update/Insert many documents in the specified collection.
-        """
-        self.connect()
-        operations = [
-            UpdateOne(
-                {col:row[col] for col in filter_cols},
-                {'$set':{k:v for k,v in row.to_dict().items() if k not in filter_cols}},
-                upsert=upsert
-            )
-            for _, row in df.iterrows()
-        ]
-        return self.db[collection_name].bulk_write(operations)
+#     def bulk_upsert(self, collection_name, df, filter_cols:list=['_id'], upsert=True):
+#         """
+#         Update/Insert many documents in the specified collection.
+#         """
+#         self.connect()
+#         operations = [
+#             UpdateOne(
+#                 {col:row[col] for col in filter_cols},
+#                 {'$set':{k:v for k,v in row.to_dict().items() if k not in filter_cols}},
+#                 upsert=upsert
+#             )
+#             for _, row in df.iterrows()
+#         ]
+#         return self.db[collection_name].bulk_write(operations)
 
-    def find(self, collection_name, query=None, projection=None):
-        """
-        Retrieve documents from the specified collection.
-        """
-        self.connect()
-        return self.db[collection_name].find(query or {}, projection)
+#     def find(self, collection_name, query=None, projection=None):
+#         """
+#         Retrieve documents from the specified collection.
+#         """
+#         self.connect()
+#         return self.db[collection_name].find(query or {}, projection)
 
-    def delete_one(self, collection_name, query):
-        """
-        Delete a single document from the specified collection.
-        """
-        self.connect()
-        return self.db[collection_name].delete_one(query)
+#     def delete_one(self, collection_name, query):
+#         """
+#         Delete a single document from the specified collection.
+#         """
+#         self.connect()
+#         return self.db[collection_name].delete_one(query)
 
-    def delete_many(self, collection_name, query):
-        """
-        Delete multiple documents from the specified collection.
-        """
-        self.connect()
-        return self.db[collection_name].delete_many(query)
+#     def delete_many(self, collection_name, query):
+#         """
+#         Delete multiple documents from the specified collection.
+#         """
+#         self.connect()
+#         return self.db[collection_name].delete_many(query)
 
 class PostgresDBHandler:
     def __init__(self, host, database, user, password, port=5432):
