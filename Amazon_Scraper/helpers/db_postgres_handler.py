@@ -50,7 +50,7 @@ class AsyncPostgresDBHandler:
             print(f"Error inserting into {table}: {e}")
             raise
 
-    async def read(self, table, columns='*', conditions=None):
+    async def read(self, table=None, columns='*', conditions=None, query=None):
         """
         Read records from the specified table.
         
@@ -62,11 +62,15 @@ class AsyncPostgresDBHandler:
         Returns:
             list[dict]: List of retrieved records as dictionaries.
         """
-        if isinstance(columns, list):
-            columns = ', '.join(columns)
-        query = f"SELECT {columns} FROM {table}"
-        if conditions:
-            query += f" WHERE {conditions}"
+        if not query:
+            if isinstance(columns, list):
+                columns = ', '.join(columns)
+            query = f"SELECT {columns} FROM {table}"
+            if conditions:
+                query += f" WHERE {conditions}"
+        else:
+            query = query.strip()
+            table = query.split(' ')[query.lower().split(' ').index('from') + 1]
         try:
             records = await self.connection.fetch(query)
             # Convert asyncpg.Record objects to dicts
@@ -74,7 +78,25 @@ class AsyncPostgresDBHandler:
         except asyncpg.PostgresError as e:
             print(f"Error reading from {table}: {e}")
             raise
-
+    
+    async def stream_read(self, query):
+        """
+        Read records from the specified table in a streaming fashion.
+        
+        Args:
+            query (str): The full SQL query to execute.
+        
+        Returns:
+            asyncpg.Record: An asyncpg Record object.
+        """
+        try:
+            async for record in self.connection.transaction():
+                async for record in self.connection.cursor(query):
+                    yield record
+        except asyncpg.PostgresError as e:
+            print(f"Error streaming records: {e}")
+            raise
+    
     async def update(self, table, data, conditions):
         """
         Update records in the specified table.
@@ -235,7 +257,7 @@ class PostgresDBHandler:
             print(f"Error inserting into {table}: {e}")
             raise
 
-    def read(self, table, columns='*', conditions=None):
+    def read(self, table=None, columns='*', conditions=None, query = None):
         """
         Read records from the specified table.
         
@@ -247,11 +269,15 @@ class PostgresDBHandler:
         Returns:
             list[dict]: List of retrieved records as dictionaries.
         """
-        if isinstance(columns, list):
-            columns = ', '.join(columns)
-        query = f"SELECT {columns} FROM {table}"
-        if conditions:
-            query += f" WHERE {conditions}"
+        if not query:
+            if isinstance(columns, list):
+                columns = ', '.join(columns)
+            query = f"SELECT {columns} FROM {table}"
+            if conditions:
+                query += f" WHERE {conditions}"
+        else:
+            query = query.strip()
+            table = query.split(' ')[query.lower().split(' ').index('from') + 1]
         
         try:
             with self.connection.cursor(cursor_factory=RealDictCursor) as cursor:
@@ -259,6 +285,42 @@ class PostgresDBHandler:
                 return cursor.fetchall()
         except psycopg2.Error as e:
             print(f"Error reading from {table}: {e}")
+            raise
+    
+    def stream_read(self, table=None, columns='*', conditions=None, query=None, batch_size=1000):
+        """
+        Stream large result sets from the database in chunks.
+        
+        Args:
+            table (str): Name of the table.
+            columns (str or list): Columns to retrieve (default is '*').
+            conditions (str): WHERE clause conditions (optional).
+            batch_size (int): Number of rows to fetch per iteration (default is 1000).
+        
+        Yields:
+            dict: A row from the result set.
+        """
+        if not query:
+            if isinstance(columns, list):
+                columns = ', '.join(columns)
+            query = f"SELECT {columns} FROM {table}"
+            if conditions:
+                query += f" WHERE {conditions}"
+        else:
+            query = query.strip()
+            table = query.split(' ')[query.lower().split(' ').index('from') + 1]
+        
+        try:
+            with self.connection.cursor(name="stream_cursor", cursor_factory=RealDictCursor) as cursor:
+                cursor.execute(query)
+                while True:
+                    rows = cursor.fetchmany(batch_size)
+                    if not rows:
+                        break
+                    for row in rows:
+                        yield row
+        except psycopg2.Error as e:
+            print(f"Error streaming from {table}: {e}")
             raise
 
     def update(self, table, data, conditions):
@@ -323,24 +385,6 @@ class PostgresDBHandler:
             self.connection.rollback()
             print(f"Error during bulk upsert: {e}")
             raise
-    
-    # def execute_stored_procedure(self, procedure_name):
-    #     """
-    #     Execute a stored procedure in PostgreSQL.
-
-    #     Args:
-    #         procedure_name (str): The name of the stored procedure, including the schema (e.g., 'processed.sp_update_master_tables').
-    #     """
-    #     try:
-    #         with self.connection.cursor() as cursor:
-    #             # Execute the stored procedure
-    #             cursor.execute(f"CALL {procedure_name}();")
-    #             self.connection.commit()
-    #             print(f"Stored procedure {procedure_name} executed successfully.")
-    #     except psycopg2.Error as e:
-    #         self.connection.rollback()
-    #         print(f"Error executing stored procedure {procedure_name}: {e}")
-    #         raise
     
     def execute(self, query, type=None):
         """
