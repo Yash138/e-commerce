@@ -2,11 +2,13 @@ name: venv_scrapy_amazon
 channels:
   - defaults
 dependencies:
-  - python=3.10
+  - python=3.12
   - ipykernel
   - conda-forge::scrapy
   # - conda-forge::pymongo
   - pandas
   - anaconda::psycopg2
   - conda-forge::asyncpg
-prefix: C:\Users\Yash Varshney\.conda\envs\venv_scrapy_amazon
+  - pip:
+    - scrapy-user-agents
+prefix: C:\Users\yashl\.conda\envs\venv_scrapy_amazon
