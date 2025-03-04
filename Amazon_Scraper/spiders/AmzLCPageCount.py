@@ -81,7 +81,8 @@ class AmzlcpagecountSpider(scrapy.Spider):
                 "subcategory": response.meta['subcategory'],
                 "avg_rating": response.meta['avg_rating'],
                 "avg_sales_qty": response.meta['avg_sales_qty'],
-                "total_pages": total_pages
+                "total_pages": total_pages,
+                "url": response.url
             }
         else:
-            self.log("Total number of pages not found")
+            self.log(f"Total number of pages not found for : {response.url}")
