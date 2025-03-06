@@ -1,3 +1,5 @@
+import pandas as pd
+
 def find_key_path(json_obj, target_key, path=None):
     """Recursively searches for a key in a nested JSON structure and returns the path to it."""
     if path is None:
@@ -23,7 +25,6 @@ def find_key_path(json_obj, target_key, path=None):
 
 
 def extract_paths(data):
-    import pandas
     
     def dfs(data, path=None):
         if path is None:
@@ -50,6 +51,26 @@ def extract_paths(data):
 
     for i in output:
         i.remove('bestsellers')
-    df = pandas.DataFrame(output, columns=['category']+['lvl'+str(i) for i in range(1, 21)])
+    df = pd.DataFrame(output, columns=['category']+['lvl'+str(i) for i in range(1, 21)])
     df['data_node'] = df.iloc[:, 1:22].ffill(axis=1).iloc[:, -1]
     return df.to_dict(orient='records')
+
+def extract_categories(data, results=None):
+    if results is None:
+        results = []
+
+    if isinstance(data, dict):
+        # If category_id and category_name exist, add to results
+        if "category_id" in data and "category_name" in data:
+            results.append({
+                "category_id": data["category_id"],
+                "category_name": data["category_name"]
+            })
+        
+        # Recursively explore subcategories
+        for key, value in data.items():
+            if isinstance(value, dict):  # Check for nested dictionaries
+                extract_categories(value, results)
+    df = pd.DataFrame(results)
+    results = df.to_dict(orient='records')
+    return results
