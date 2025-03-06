@@ -345,7 +345,7 @@ class PostgresDBHandler:
             print(f"Error updating {table}: {e}")
             raise
 
-    def bulk_upsert(self, table, data, conflict_columns, update_columns):
+    def bulk_upsert(self, table, data, conflict_columns, update_columns=None):
         """
         Perform a bulk upsert operation.
 
@@ -365,7 +365,14 @@ class PostgresDBHandler:
         value_placeholders = ", ".join([f"%({col})s" for col in columns])
 
         conflict_clause = ", ".join(conflict_columns)
-        update_clause = ", ".join([f"{col} = EXCLUDED.{col}" for col in update_columns])
+        
+        if update_columns:
+            update_clause = ", ".join([f"{col} = EXCLUDED.{col}" for col in update_columns])
+        else:
+            # Update all columns except the conflict columns
+            update_clause = ", ".join(
+                [f"{col} = EXCLUDED.{col}" for col in columns if col not in conflict_columns]
+            )
 
         query = f"""
             INSERT INTO {table} ({column_list})
