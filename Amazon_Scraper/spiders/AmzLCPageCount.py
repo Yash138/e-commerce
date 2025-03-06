@@ -2,7 +2,7 @@ import scrapy
 from Amazon_Scraper.helpers.db_postgres_handler import PostgresDBHandler
 from scrapy.utils.defer import deferred_from_coro
 
-class AmzlcpagecountSpider(scrapy.Spider):
+class AmzLCPageCountSpider(scrapy.Spider):
     name = "AmzLCPageCount"
     allowed_domains = ["www.amazon.in"]
     # start_urls = ["https://www.amazon.in/s?i=kitchen&rh=n%3A27385462031&s=popularity-rank&fs=true&ref=lp_27385462031_sar"]
