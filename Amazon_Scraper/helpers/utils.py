@@ -58,19 +58,21 @@ def extract_paths(data):
 def extract_categories(data, results=None):
     if results is None:
         results = []
-
-    if isinstance(data, dict):
-        # If category_id and category_name exist, add to results
-        if "category_id" in data and "category_name" in data:
-            results.append({
-                "category_id": data["category_id"],
-                "category_name": data["category_name"]
-            })
-        
-        # Recursively explore subcategories
-        for key, value in data.items():
-            if isinstance(value, dict):  # Check for nested dictionaries
-                extract_categories(value, results)
-    df = pd.DataFrame(results)
+    def dfs(data):
+        if isinstance(data, dict):
+            # If category_id and category_name exist, add to results
+            if "category_id" in data and "category_name" in data:
+                results.append({
+                    "category_id": data["category_id"],
+                    "category_name": data["category_name"]
+                })
+            
+            # Recursively explore subcategories
+            for key, value in data.items():
+                if isinstance(value, dict):  # Check for nested dictionaries
+                    dfs(value)
+        return results
+    results = dfs(data)
+    df = pd.DataFrame(results)    
     results = df.to_dict(orient='records')
     return results
