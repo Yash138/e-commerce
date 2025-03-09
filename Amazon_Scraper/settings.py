@@ -102,4 +102,13 @@ POSTGRES_HOST = 'localhost'
 POSTGRES_DATABASE = 'ecommerce'
 POSTGRES_USERNAME = 'postgres'
 POSTGRES_PASSWORD = 'hsV6.sfi2'
-POSTGRES_PORT = '5432'
+POSTGRES_PORT = '5432'        "bestsellers": "bestsellers",
+        "movers_and_shakers": "movers-and-shakers",
+        "most_wished_for": "most-wished-for",
+        "hot_new_releases": "new-releases"
+    }
+EXCLUDE_CATEGORIES = [
+    'Amazon Launchpad','Amazon Renewed','Apps & Games', 'Books', 'Clothing & Accessories', 
+    'Gift Cards','Kindle Store','Movies & TV Shows','Music','Musical Instruments', 'Software', 
+    'Toys & Games','Video Games','Watches']
+# EXCLUDE_CATEGORIES = [
