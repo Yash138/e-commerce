@@ -6,7 +6,14 @@
 import scrapy
 
 
-class AmazonScraperItem(scrapy.Item):
+class AmazonCategoryItem(scrapy.Item):
     # define the fields for your item here like:
     # name = scrapy.Field()
-    pass
+    list_type = scrapy.Field()
+    category = scrapy.Field()
+    sub_category = scrapy.Field()
+    asin = scrapy.Field()
+    rank = scrapy.Field()
+    sales_rank = scrapy.Field()
+    load_timestamp = scrapy.Field()
+    product_url = scrapy.Field()
