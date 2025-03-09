@@ -103,6 +103,9 @@ POSTGRES_DATABASE = 'ecommerce'
 POSTGRES_USERNAME = 'postgres'
 POSTGRES_PASSWORD = 'hsV6.sfi2'
 POSTGRES_PORT = '5432'        "bestsellers": "bestsellers",
+
+CATEGORIES = {
+        "bestsellers": "bestsellers",
         "movers_and_shakers": "movers-and-shakers",
         "most_wished_for": "most-wished-for",
         "hot_new_releases": "new-releases"
