@@ -6,11 +6,19 @@ from datetime import datetime as dt
 
 class AmzcategorySpider(scrapy.Spider):
     name = "AmzCategory"
+    table_name = 'staging.stg__amazon_product_rankings'
     allowed_domains = ["www.amazon.in"]
     BASE_URL = "https://www.amazon.in/gp/{category}"
     
-    def __init__(self, list_type="bestsellers", *args, **kwargs):
+    custom_settings = {
+        'ITEM_PIPELINES': {
+            'Amazon_Scraper.pipelines.postgres_pipeline.AmzProductRankingStgSyncPipeline': 300,
+        }
+    }
+
+    def __init__(self, list_type="bestsellers", batch_size=1, *args, **kwargs):
         self.list_type = list_type  # Accept list_type parameter
+        self.batch_size = int(batch_size)
         self.visited_url = set()
         
     @classmethod
@@ -19,7 +27,7 @@ class AmzcategorySpider(scrapy.Spider):
         spider = cls(*args, **kwargs)
         spider.settings = crawler.settings  # ✅ Assign settings properly
         spider.crawler = crawler
-        
+
         # since __init__ is called before from_crawler, we can validate the list_type here
         if spider.list_type not in spider.settings['CATEGORIES']:
             raise ValueError(f"Invalid list_type: {spider.list_type}. Must be one of {list(spider.settings['CATEGORIES'].keys())}")
@@ -55,7 +63,7 @@ class AmzcategorySpider(scrapy.Spider):
                                | //*[@data-asin="{item['asin']}"]/div[1]/div[1]/div[1]/span/text()
                             ''').get().replace('#',''))
             item['product_url'] = response.urljoin(product.xpath(f'//div[@id="{item['asin']}"]/a/@href').get()).split('/ref')[0]
-            item['load_timestamp'] = dt.now()
+            # item['load_timestamp'] = dt.now()
             if list_type == "movers_and_shakers":
                 item['sales_rank'] = response.xpath(f'//div[@data-asin="{item['asin']}"]/div[1]/span/text()').get()
             yield item
