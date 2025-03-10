@@ -68,9 +68,10 @@ RETRY_HTTP_CODES = [500, 502, 503, 504, 408]  # Retry on server-side issues
 
 # Configure item pipelines
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
-#ITEM_PIPELINES = {
-#    "Amazon_Scraper.pipelines.AmazonScraperPipeline": 300,
-#}
+ITEM_PIPELINES = {
+#    "Amazon_Scraper.pipelines.postgres_pipeline.AmzProductRankingStgAsyncPipeline": 300,
+    "Amazon_Scraper.pipelines.postgres_pipeline.AmzProductRankingStgSyncPipeline": 300,
+}
 
 # Enable and configure the AutoThrottle extension (disabled by default)
 # See https://docs.scrapy.org/en/latest/topics/autothrottle.html
@@ -102,7 +103,7 @@ POSTGRES_HOST = 'localhost'
 POSTGRES_DATABASE = 'ecommerce'
 POSTGRES_USERNAME = 'postgres'
 POSTGRES_PASSWORD = 'hsV6.sfi2'
-POSTGRES_PORT = '5432'        "bestsellers": "bestsellers",
+POSTGRES_PORT = '5432'
 
 CATEGORIES = {
         "bestsellers": "bestsellers",
