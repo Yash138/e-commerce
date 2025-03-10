@@ -399,9 +399,9 @@ class PostgresDBHandler:
             raise Exception(f"Error during bulk upsert: {e}")
             
     
-    def execute(self, query, type=None):
+    def execute(self, query):
         """
-        Execute a query in PostgreSQL.
+        Execute CRUD statements in PostgreSQL.
 
         Args:
             query (str): The whole sql query to be executed (e.g. select * from processed.amz__product_category)
@@ -412,8 +412,6 @@ class PostgresDBHandler:
                 cursor.execute(query)
                 self.connection.commit()
                 print(f"Query executed successfully.")
-                if type is None:
-                    return cursor.fetchall()
         except psycopg2.Error as e:
             self.connection.rollback()
             print(f"Error executing query {query}: {e}")

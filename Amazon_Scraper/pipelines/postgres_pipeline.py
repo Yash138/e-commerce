@@ -28,6 +28,7 @@ class AmzProductRankingStgSyncPipeline:
         Called when the spider is opened.
         """
         self.batch_size = spider.batch_size
+        self.list_type = spider.list_type
         self.postgres_handler.connect()
 
     def close_spider(self, spider):
@@ -36,6 +37,7 @@ class AmzProductRankingStgSyncPipeline:
         """
         if self.items:
             self.upsert_batch(spider.table_name)
+        self.postgres_handler.execute(f'''call transformed.sp_amz__process_product_rankings('{self.list_type}');''')
         self.postgres_handler.close()
 
     def process_item(self, item, spider):
