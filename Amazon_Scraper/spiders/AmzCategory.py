@@ -27,8 +27,8 @@ class AmzcategorySpider(scrapy.Spider):
 
     def start_requests(self):
         with open(f"./.data/visited_urls_{self.list_type}.txt", "r") as f:
-            self.urls = set(f.read().splitlines())
-        for url in self.urls:
+            urls = set(f.read().splitlines())
+        for url in urls:
             yield scrapy.Request(
                 url, 
                 callback=self.parse, 

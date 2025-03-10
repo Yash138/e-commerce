@@ -20,11 +20,10 @@ class AmzcategoryurlsSpider(scrapy.Spider):
         spider = cls(*args, **kwargs)
         spider.settings = crawler.settings  # ✅ Assign settings properly
         spider.crawler = crawler
-        
+        crawler.signals.connect(spider.spider_closed, signal=signals.spider_closed)
         # since __init__ is called before from_crawler, we can validate the list_type here
         if spider.list_type not in spider.settings['CATEGORIES']:
             raise ValueError(f"Invalid list_type: {spider.list_type}. Must be one of {list(spider.settings['CATEGORIES'].keys())}")
-        crawler.signals.connect(spider.spider_closed, signal=signals.spider_closed)
         return spider
 
     def start_requests(self):
@@ -34,19 +33,14 @@ class AmzcategoryurlsSpider(scrapy.Spider):
     def parse(self, response):
         list_type = response.meta["list_type"]
         current_depth = response.meta.get("depth", 0)
-        url = response.url.split("/ref")[0]
-        if url.split("/")[-1] != self.settings.get('CATEGORIES')[list_type] and url not in self.visited_url:
-            self.visited_url.add(url)
-        else:
-            pass
-        
+        # url = response.url.split("/ref")[0]        
         self.log(f"Current Depth: {current_depth}")
-        # list_type = response.meta["list_type"]
         for category in response.xpath("//div[@role='treeitem']"):
             category_name = category.xpath("./a/text()").get()
-            # self.log(f"Category: {category_name}")
             category_url = response.urljoin(category.xpath("./a/@href").get())
-            if category_name not in self.settings.get('EXCLUDE_CATEGORIES'):
+            if (category_name not in self.settings.get('EXCLUDE_CATEGORIES')
+                and category_url.split("/")[-1] != self.settings.get('CATEGORIES')[list_type] 
+                and category_url not in self.visited_url):
                 self.visited_url.add(category_url)
                 yield scrapy.Request(
                     url=category_url,
