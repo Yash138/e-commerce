@@ -12,17 +12,20 @@ class AsyncPostgresDBHandler:
         self.password = password
         self.port = port
         self.connection = None
+        self.loop = asyncio.get_event_loop()
 
     async def connect(self):
         """Establish an asynchronous connection to the PostgreSQL database."""
+        dsn = f'postgresql://{self.user}:{self.password}@{self.host}:{self.port}/{self.database}'
         try:
-            self.connection = await asyncpg.connect(
-                host=self.host,
-                database=self.database,
-                user=self.user,
-                password=self.password,
-                port=self.port
-            )
+            self.connection = await asyncpg.create_pool(dsn, loop=self.loop)
+            # self.connection = await asyncpg.connect( 
+            #     host=self.host,
+            #     database=self.database,
+            #     user=self.user,
+            #     password=self.password,
+            #     port=self.port
+            # )
         except asyncpg.PostgresError as e:
             print(f"Error connecting to PostgreSQL database: {e}")
             raise
@@ -45,7 +48,8 @@ class AsyncPostgresDBHandler:
         placeholders = ', '.join(f'${i}' for i in range(1, len(data) + 1))
         query = f"INSERT INTO {table} ({columns}) VALUES ({placeholders});"
         try:
-            await self.connection.execute(query, *tuple(data.values()))
+            async with self.connection.acquire() as connection:
+                await connection.execute(query, *tuple(data.values()))
         except asyncpg.PostgresError as e:
             print(f"Error inserting into {table}: {e}")
             raise
@@ -158,7 +162,8 @@ class AsyncPostgresDBHandler:
             # Prepare a list of tuples corresponding to each row's values in order.
             values_list = [tuple(item[col] for col in columns) for item in data]
             # Execute the statement for each tuple
-            await self.connection.executemany(query, values_list)
+            async with self.connection.acquire() as connection:
+                await connection.executemany(query, values_list)
             print(f"Bulk upsert completed for {len(data)} rows.")
         except asyncpg.PostgresError as e:
             print(f"Error during bulk upsert: {e}")
@@ -361,8 +366,10 @@ class PostgresDBHandler:
 
         # Generate the SQL parts dynamically
         columns = data[0].keys()  # Assume all rows have the same keys
+        values = [tuple(record[col] for col in columns) for record in data]
         column_list = ", ".join(columns)
-        value_placeholders = ", ".join([f"%({col})s" for col in columns])
+        # value_placeholders = ", ".join([f"%({col})s" for col in columns])
+        # value_placeholders = ", ".join([f"{col}" for col in columns])
 
         conflict_clause = ", ".join(conflict_columns)
         
@@ -373,25 +380,24 @@ class PostgresDBHandler:
             update_clause = ", ".join(
                 [f"{col} = EXCLUDED.{col}" for col in columns if col not in conflict_columns]
             )
-
+        
         query = f"""
             INSERT INTO {table} ({column_list})
-            VALUES ({value_placeholders})
+            VALUES %s 
             ON CONFLICT ({conflict_clause})
-            DO UPDATE SET
-            {update_clause};
+            DO UPDATE SET {update_clause};
         """
-
+        
         try:
             with self.connection.cursor() as cursor:
                 # Use execute_values for efficiency
-                execute_values(cursor, query, data)
+                execute_values(cursor, query, values)
                 self.connection.commit()
                 print(f"Bulk upsert completed for {len(data)} rows.")
         except psycopg2.Error as e:
             self.connection.rollback()
-            print(f"Error during bulk upsert: {e}")
-            raise
+            raise Exception(f"Error during bulk upsert: {e}")
+            
     
     def execute(self, query, type=None):
         """
