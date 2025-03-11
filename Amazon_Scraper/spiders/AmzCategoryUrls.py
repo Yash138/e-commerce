@@ -7,7 +7,8 @@ class AmzcategoryurlsSpider(scrapy.Spider):
     allowed_domains = ["www.amazon.in"]
     BASE_URL = "https://www.amazon.in/gp/{category}"
     custom_settings = {
-        "DEPTH_LIMIT": 1
+        "DEPTH_LIMIT": 1,
+        "ITEM_PIPELINES":{}
     }
     
     def __init__(self, list_type="bestsellers", *args, **kwargs):
@@ -54,8 +55,7 @@ class AmzcategoryurlsSpider(scrapy.Spider):
     
     def spider_closed(self, reason):
         """Save visited URLs when spider closes."""
-        self.log(f"Spider closed: {reason}")
-        file_path = f"./.data/visited_urls_{self.list_type}.txt"
-        with open(file_path, "w") as file:
+        file_path = f"./.urls_to_scrap/category_ranking_urls_{self.list_type}.txt"
+        with open(file_path, "w") as file:    # open in overwrite mode
             file.writelines(f"{item}\n" for item in self.visited_url)
         print(f"Saved {len(self.visited_url)} visited URLs to {file_path}")

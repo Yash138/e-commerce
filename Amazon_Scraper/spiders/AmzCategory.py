@@ -6,7 +6,7 @@ from datetime import datetime as dt
 
 class AmzcategorySpider(scrapy.Spider):
     name = "AmzCategory"
-    table_name = 'staging.stg__amazon_product_rankings'
+    table_name = 'staging.stg_amz__product_rankings'
     allowed_domains = ["www.amazon.in"]
     BASE_URL = "https://www.amazon.in/gp/{category}"
     
@@ -34,7 +34,7 @@ class AmzcategorySpider(scrapy.Spider):
         return spider
 
     def start_requests(self):
-        with open(f"./.data/visited_urls_{self.list_type}.txt", "r") as f:
+        with open(f"./.urls_to_scrap/category_ranking_urls_{self.list_type}.txt", "r") as f:
             urls = set(f.read().splitlines())
         for url in urls:
             yield scrapy.Request(

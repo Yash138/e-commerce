@@ -131,4 +131,4 @@ dmypy.json
 
 # output
 .json/
-.data/
+.urls_to_scrap/
