@@ -1,4 +1,5 @@
 import pandas as pd
+import re
 
 def find_key_path(json_obj, target_key, path=None):
     """Recursively searches for a key in a nested JSON structure and returns the path to it."""
@@ -76,3 +77,24 @@ def extract_categories(data, results=None):
     df = pd.DataFrame(results)    
     results = df.to_dict(orient='records')
     return results
+
+def extract_numeric_part(value):
+    if isinstance(value, str):
+        # extract the numeric part
+        x = [i for i in value.split(' ') if re.search(r'\d', i)]
+        if len(x) > 1:
+            raise Exception(f"Expected One Numeric Part, got {len(x)}:{x}")
+        # remove special characters, exclude: decimal and alphanumeric letters
+        if x:
+            x = re.sub(r'[^a-zA-Z0-9\s\.]', '', x[0]).lower()
+            if x[-1] == 'k':
+                x = float(x.replace('k',''))*1000
+            elif x[-1] == 'l':
+                x = float(x.replace('l',''))*1_000_000
+            else:
+                x = float(x)
+            return x
+        return None
+    
+def safe_strip(value):
+    return value.strip() if isinstance(value, str) else value
