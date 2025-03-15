@@ -1,5 +1,7 @@
 import scrapy
+import scrapy.signals
 from Amazon_Scraper.items import AmazonProductItem
+from Amazon_Scraper.helpers.db_postgres_handler import PostgresDBHandler
 from datetime import datetime as dt
 
 
@@ -17,25 +19,53 @@ class AmzproductsSpider(scrapy.Spider):
             'scrapy_user_agents.middlewares.RandomUserAgentMiddleware': 400,
         }
     }
-    start_urls = ["https://www.amazon.in/XMART-INDIA-Drilling-Rectangular-Multipurpose/dp/B0DJYDR2ZN",
-                  "https://www.amazon.in/JPS-Stainless-Bathroom-Wall-Mounted-Accessories/dp/B0D51RF652"]
+    # start_urls = ["https://www.amazon.in/XMART-INDIA-Drilling-Rectangular-Multipurpose/dp/B0DJYDR2ZN",
+    #               "https://www.amazon.in/JPS-Stainless-Bathroom-Wall-Mounted-Accessories/dp/B0D51RF652"]
 
-    def __init__(self, batch_size = 1, **kwargs):
-        self.batch_size = int(batch_size) 
+    def __init__(self, postgres_handler, batch_size = 1, **kwargs):
+        self.postgres_handler = postgres_handler
+        self.batch_size = int(batch_size)
 
     @classmethod
     def from_crawler(cls, crawler, *args, **kwargs):
-        """Attach Scrapy settings to the spider."""
-        spider = cls(*args, **kwargs)
+        """
+        Access settings from Scrapy's configuration.
+        """
+        postgres_handler = PostgresDBHandler(
+                crawler.settings.get('POSTGRES_HOST'),
+                crawler.settings.get('POSTGRES_DATABASE'),
+                crawler.settings.get('POSTGRES_USERNAME'),
+                crawler.settings.get('POSTGRES_PASSWORD'),
+                crawler.settings.get('POSTGRES_PORT')
+            )
+        spider = cls(postgres_handler, *args, **kwargs)
+        spider.crawler = crawler  # ✅ Attach the crawler instance
+        
+        crawler.signals.connect(spider.spider_closed, signal=scrapy.signals.spider_closed)
         return spider
     
-    # def start_requests(self):
-    #     for url in getUrlToScrap('postgres'):
-    #         yield scrapy.Request(url['product_url'], callback=self.parse)     # , meta={'dont_redirect':True, "handle_httpstatus_list": [301]}
+    def start_requests(self):
+        self.postgres_handler.connect()
+        for i,row in enumerate(self.postgres_handler.stream_read(
+            query="""select * from staging.stg_amz__product_url_feeder """,
+            batch_size=self.batch_size
+        )):
+            self.log(f"Processing batch {i+1}")
+            try:
+                asin = row['asin']
+                product_url = row['product_url']
+                yield scrapy.Request(
+                    url=product_url, 
+                    callback=self.parse,
+                    meta={"asin": asin})
+            except Exception as e:
+                self.log(f"Error for: {row}\n{e}")
+    
     
     def parse(self, response):
         item = AmazonProductItem()
-        item['asin'] = response.url.split('/dp/')[-1]
+        # item['asin'] = response.url.split('/dp/')[-1]
+        item['asin'] = response.meta.get('asin')
         item['category'] = response.xpath('//*[contains(@id,"wayfinding-breadcrumbs")]/ul/li[1]/span/a/text()').get()
         item['lowest_category'] = response.xpath('//*[contains(@id,"wayfinding-breadcrumbs")]/ul/li[last()]/span/a/text()').get()
         item['product_name'] = response.xpath('//*[@id="productTitle"]/text()').get()
@@ -67,3 +97,6 @@ class AmzproductsSpider(scrapy.Spider):
             ).get())
         item['scrape_date'] = dt.now()
         yield item
+
+    def spider_closed(self, spider):
+        self.postgres_handler.close()
