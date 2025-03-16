@@ -31,7 +31,7 @@ ROBOTSTXT_OBEY = True
 #CONCURRENT_REQUESTS_PER_IP = 16
 
 # Disable cookies (enabled by default)
-#COOKIES_ENABLED = False
+COOKIES_ENABLED = False
 
 # Disable Telnet Console (enabled by default)
 #TELNETCONSOLE_ENABLED = False
@@ -51,8 +51,8 @@ ROBOTSTXT_OBEY = True
 # Enable or disable downloader middlewares
 # See https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
 DOWNLOADER_MIDDLEWARES = {
-    'scrapy.downloadermiddlewares.useragent.UserAgentMiddleware': 400,
-#     'scrapy_user_agents.middlewares.RandomUserAgentMiddleware': 400,
+    # 'scrapy.downloadermiddlewares.useragent.UserAgentMiddleware': 400,
+    'scrapy_user_agents.middlewares.RandomUserAgentMiddleware': 400,
 }
 
 RETRY_ENABLED = True
@@ -71,6 +71,7 @@ RETRY_HTTP_CODES = [500, 502, 503, 504, 408]  # Retry on server-side issues
 ITEM_PIPELINES = {
 #    "Amazon_Scraper.pipelines.postgres_pipeline.AmzProductRankingStgAsyncPipeline": 300,
     "Amazon_Scraper.pipelines.postgres_pipeline.AmzProductRankingStgSyncPipeline": 300,
+    "Amazon_Scraper.pipelines.products_pipeline.AmzProductsPipeline": 300,
 }
 
 # Enable and configure the AutoThrottle extension (disabled by default)
