@@ -30,6 +30,7 @@ class AmzProductsPipeline:
         """
         self.batch_size = spider.batch_size
         self.postgres_handler.connect()
+        self.postgres_handler.execute(f'truncate table {spider.stg_table_name};')
         self.postgres_handler.execute('call staging.sp_amz___refresh_product_url_feeder();')
 
     def close_spider(self, spider):
@@ -38,7 +39,7 @@ class AmzProductsPipeline:
         """
         if self.items:
             self.upsert_batch(spider.stg_table_name)
-        # self.postgres_handler.execute(f'''call transformed.sp_amz__process_product_rankings('{self.list_type}');''')
+        self.postgres_handler.execute(f'''call transformed.sp_amz__scd2_update_product_data();''')
         self.postgres_handler.close()
 
     def process_item(self, item, spider):

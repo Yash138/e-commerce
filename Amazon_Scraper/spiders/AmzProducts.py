@@ -9,7 +9,6 @@ class AmzproductsSpider(scrapy.Spider):
     name = "AmzProducts"
     allowed_domains = ["www.amazon.in"]
     stg_table_name = 'staging.stg_amz__product'
-    # trf_table_name = 'transformed.trf_amz__product_details'
     custom_settings = {
         "ITEM_PIPELINES" : {
             "Amazon_Scraper.pipelines.products_pipeline.AmzProductsPipeline": 300,
@@ -22,9 +21,6 @@ class AmzproductsSpider(scrapy.Spider):
         "DOWNLOAD_DELAY" : 3,
         "RANDOMIZE_DOWNLOAD_DELAY" : True
     }
-
-    # start_urls = ["https://www.amazon.in/XMART-INDIA-Drilling-Rectangular-Multipurpose/dp/B0DJYDR2ZN",
-    #               "https://www.amazon.in/JPS-Stainless-Bathroom-Wall-Mounted-Accessories/dp/B0D51RF652"]
 
     def __init__(self, postgres_handler, batch_size = 1, **kwargs):
         self.postgres_handler = postgres_handler
@@ -43,7 +39,7 @@ class AmzproductsSpider(scrapy.Spider):
                 crawler.settings.get('POSTGRES_PORT')
             )
         spider = cls(postgres_handler, *args, **kwargs)
-        spider.crawler = crawler  # ✅ Attach the crawler instance
+        spider.crawler = crawler  # Attach the crawler instance
         
         crawler.signals.connect(spider.spider_closed, signal=scrapy.signals.spider_closed)
         return spider
@@ -98,7 +94,7 @@ class AmzproductsSpider(scrapy.Spider):
                 '//*[@id="bylineInfo_feature_div"]/div[1]/a/@href | '
                 '//*[@id="bylineInfo_feature_div"]/div[1]/span/a/@href'
             ).get())
-        item['scrape_date'] = dt.now()
+        item['scrape_date'] = dt.now()  # remove this and have the columns value as default in the staging table
         is_unavailable = response.xpath("//text()[normalize-space()='Currently unavailable.']").get()
         
         if is_unavailable:
