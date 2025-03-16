@@ -37,7 +37,7 @@ class AmzProductsPipeline:
         Called when the spider is closed.
         """
         if self.items:
-            self.upsert_batch(spider.table_name)
+            self.upsert_batch(spider.stg_table_name)
         # self.postgres_handler.execute(f'''call transformed.sp_amz__process_product_rankings('{self.list_type}');''')
         self.postgres_handler.close()
 
@@ -47,7 +47,7 @@ class AmzProductsPipeline:
         """
         # clean the item
         item = {k:safe_strip(v) for k,v in item.items()}
-        item['seller_id'] = item['seller_id'][item['seller_id'].index('seller=')+7 : item['seller_id'].index('asin=')-1]
+        item['seller_id'] = None if not item['seller_id'] else item['seller_id'][item['seller_id'].index('seller=')+7 : item['seller_id'].index('asin=')-1]
         item['last_month_sale'] = round(extract_numeric_part(item['last_month_sale']))
         item['rating'] = extract_numeric_part(item['rating'])
         item['reviews_count'] = round(extract_numeric_part(item['reviews_count']))
