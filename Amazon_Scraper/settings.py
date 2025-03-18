@@ -7,7 +7,7 @@
 #     https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
 #     https://docs.scrapy.org/en/latest/topics/spider-middleware.html
 
-BOT_NAME = "Amazon_Scraper"
+# BOT_NAME = "Amazon_Scraper"
 
 SPIDER_MODULES = ["Amazon_Scraper.spiders"]
 NEWSPIDER_MODULE = "Amazon_Scraper.spiders"
