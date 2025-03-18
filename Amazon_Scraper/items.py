@@ -32,6 +32,7 @@ class AmazonProductItem(scrapy.Item):
     sell_mrp = scrapy.Field()
     sell_price = scrapy.Field()
     launch_date = scrapy.Field()
+    is_oos = scrapy.Field()
     is_fba = scrapy.Field()
     is_variant_available = scrapy.Field()
     product_url = scrapy.Field()

@@ -17,8 +17,8 @@ class AmzproductsSpider(scrapy.Spider):
             'scrapy.downloadermiddlewares.useragent.UserAgentMiddleware': None,
             'scrapy_user_agents.middlewares.RandomUserAgentMiddleware': 400,
         },
-        "CONCURRENT_REQUESTS" : 4,
-        "DOWNLOAD_DELAY" : 3,
+        "CONCURRENT_REQUESTS" : 7,
+        "DOWNLOAD_DELAY" : 1,
         "RANDOMIZE_DOWNLOAD_DELAY" : True
     }
 
@@ -68,21 +68,24 @@ class AmzproductsSpider(scrapy.Spider):
         item['category'] = response.xpath('//*[contains(@id,"wayfinding-breadcrumbs")]/ul/li[1]/span/a/text()').get()
         item['lowest_category'] = response.xpath('//*[contains(@id,"wayfinding-breadcrumbs")]/ul/li[last()]/span/a/text()').get()
         item['product_name'] = response.xpath('//*[@id="productTitle"]/text()').get()
-        item['seller_id'] = response.xpath('//div[contains(@tabular-attribute-name, "Sold by")]//a/@href').get() or ''
+        item['seller_id'] = response.xpath(
+                                '//div[contains(@tabular-attribute-name, "Sold by")]//a/@href |'
+                                '//td[@class="alm-mod-sfsb-column"]/span/a/@href'
+                            ).get() or ''
         item['seller_name'] = response.xpath('//div[contains(@tabular-attribute-name, "Sold by")]//a/text()').get()
         item['brand_name'] = response.xpath(
-                '//*[@id="bylineInfo_feature_div"]/div[1]/a/text() | '
-                '//*[@id="bylineInfo_feature_div"]/div[1]/span/a/text()'
-            ).get()        
+                                '//*[@id="bylineInfo_feature_div"]/div[1]/a/text() | '
+                                '//*[@id="bylineInfo_feature_div"]/div[1]/span/a/text()'
+                            ).get()        
         item['last_month_sale'] = response.xpath('//*[@id="social-proofing-faceout-title-tk_bought"]/span/text()').get() or '0'
         item['rating'] = response.xpath('//*[@id="averageCustomerReviews"]/span[1]/span[1]/span[1]/a/span/text()').get()
         item['reviews_count'] = response.xpath('//*[@id="averageCustomerReviews"]/span[3]/a/span/text()').get() or '0'
         item['sell_price'] = response.xpath(
-                '//*[contains(@id, "corePriceDisplay")]/div[1]/span[3]/span[2]/span[2]/text() | '
-                '//*[contains(@id, "corePrice")]/div/div/span[1]/span[1]/text() | '
-                '//*[contains(@id, "corePrice")]/div/div/span[1]/span[2]/span[2]/text()'
-            ).get()
-        item['sell_mrp'] = response.xpath('//span[contains(text(), "M.R.P.")]/text()').get()
+                                '//*[contains(@id, "corePriceDisplay")]/div[1]/span[3]/span[2]/span[2]/text() | '
+                                '//*[contains(@id, "corePrice")]/div/div/span[1]/span[1]/text() | '
+                                '//*[contains(@id, "corePrice")]/div/div/span[1]/span[2]/span[2]/text()'
+                            ).get()
+        item['sell_mrp'] = response.xpath('''//span[contains(text(), "M.R.P.")]/span/span[1]/text()''').get()
         item['launch_date'] = response.xpath(
                 '//th[contains(text(), "Date First Available")]/../td/text() | '
                 '//span[contains(text(), "Date First Available")]/../span[2]/text()'
@@ -96,10 +99,7 @@ class AmzproductsSpider(scrapy.Spider):
             ).get())
         item['scrape_date'] = dt.now()  # remove this and have the columns value as default in the staging table
         is_unavailable = response.xpath("//text()[normalize-space()='Currently unavailable.']").get()
-        
-        if is_unavailable:
-            self.log(f"Skipping reason: Item currently unavailable: {response.url}")
-            return
+        item['is_oos'] = True if is_unavailable else False
         if item['product_name'] is None:
             self.log(f"Skipping reason: Page not loading: {response.url}")
             return

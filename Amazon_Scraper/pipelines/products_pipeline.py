@@ -1,6 +1,7 @@
 from Amazon_Scraper.helpers.db_postgres_handler import PostgresDBHandler
 from Amazon_Scraper.helpers.utils import extract_numeric_part, safe_strip
 from datetime import datetime as dt
+import re
 
 class AmzProductsPipeline:
     def __init__(self, postgres_handler):
@@ -48,7 +49,7 @@ class AmzProductsPipeline:
         """
         # clean the item
         item = {k:safe_strip(v) for k,v in item.items()}
-        item['seller_id'] = None if not item['seller_id'] else item['seller_id'][item['seller_id'].index('seller=')+7 : item['seller_id'].index('asin=')-1]
+        item['seller_id'] = None if not re.search(r"seller=([A-Z0-9]+)", item['seller_id']) else re.search(r"seller=([A-Z0-9]+)", item['seller_id']).group(1)
         item['last_month_sale'] = round(extract_numeric_part(item['last_month_sale']))
         item['rating'] = extract_numeric_part(item['rating'])
         item['reviews_count'] = round(extract_numeric_part(item['reviews_count']))
