@@ -57,7 +57,7 @@ DOWNLOADER_MIDDLEWARES = {
 
 RETRY_ENABLED = True
 RETRY_TIMES = 3  # Number of retries for a failed request
-RETRY_DELAY = 0.25  # Initial delay of 2 seconds
+RETRY_DELAY = 2  # Initial delay of 2 seconds
 RETRY_HTTP_CODES = [500, 502, 503, 504, 408]  # Retry on server-side issues
 
 # Enable or disable extensions
@@ -80,10 +80,10 @@ AUTOTHROTTLE_ENABLED = True
 # The initial download delay
 AUTOTHROTTLE_START_DELAY = 5
 # The maximum download delay to be set in case of high latencies
-AUTOTHROTTLE_MAX_DELAY = 60
+AUTOTHROTTLE_MAX_DELAY = 30
 # The average number of requests Scrapy should be sending in parallel to
 # each remote server
-#AUTOTHROTTLE_TARGET_CONCURRENCY = 1.0
+AUTOTHROTTLE_TARGET_CONCURRENCY = 1.5
 # Enable showing throttling stats for every response received:
 #AUTOTHROTTLE_DEBUG = False
 
