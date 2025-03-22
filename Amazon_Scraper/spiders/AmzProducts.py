@@ -3,7 +3,7 @@ import scrapy.signals
 from Amazon_Scraper.items import AmazonProductItem
 from Amazon_Scraper.helpers.db_postgres_handler import PostgresDBHandler
 from datetime import datetime as dt
-
+import math
 
 class AmzproductsSpider(scrapy.Spider):
     name = "AmzProducts"
@@ -11,6 +11,9 @@ class AmzproductsSpider(scrapy.Spider):
     stg_table_name = 'staging.stg_amz__product'
     none_counter = 0
     max_none_counter = 5
+    initial_delay = 1
+    delay = initial_delay
+    
     custom_settings = {
         "ITEM_PIPELINES" : {
             "Amazon_Scraper.pipelines.products_pipeline.AmzProductsPipeline": 300,
@@ -20,9 +23,9 @@ class AmzproductsSpider(scrapy.Spider):
             'scrapy_user_agents.middlewares.RandomUserAgentMiddleware': 400,
         },
         "CONCURRENT_REQUESTS" : 4,
-        "CONCURRENT_REQUESTS_PER_DOMAIN" : 2,
-        "DOWNLOAD_DELAY" : 3,
-        "RANDOMIZE_DOWNLOAD_DELAY" : True
+        "CONCURRENT_REQUESTS_PER_DOMAIN" : 4,
+        "DOWNLOAD_DELAY" : delay,
+        "RANDOMIZE_DOWNLOAD_DELAY" : False
     }
 
     handle_httpstatus_list = [404]
@@ -71,7 +74,7 @@ class AmzproductsSpider(scrapy.Spider):
     def parse(self, response):
         if response.status == 404:
                 url = response.url
-                self.failed_urls.append({'asin': response.meta.get('asin'), 'product_url': url, 'status_code': 404, 'error': 'Page not found'})
+                self.failed_urls.append({'asin': response.meta.get('asin'), 'product_url': url, 'status_code': response.status, 'error': 'Page not found'})
                 self.logger.warning(f"404 error for: {url}")
                 return  # Do not process further
 
@@ -118,24 +121,29 @@ class AmzproductsSpider(scrapy.Spider):
         is_add_to_cart = response.xpath("//*[contains(text(), 'Add to Cart')]/text()").get()
         item['is_oos'] = True if is_unavailable or not is_add_to_cart else False
         
+        # handle empty response and increase delay
         if item['product_name'] is None:
-            self.failed_urls.append({'asin': item['asin'], 'product_url': item['product_url'], 'status_code': None, 'error': 'Page not loading properly'})
+            self.failed_urls.append({'asin': item['asin'], 'product_url': item['product_url'], 'status_code': response.status, 'error': 'Page not loading properly'})
             self.none_counter += 1
             self.logger.warning(f"Consecutive empty response count: {self.none_counter}")
-            delay = self.crawler.engine.downloader.slots['www.amazon.in'].delay
             if self.none_counter >= self.max_none_counter:
-                # Option 1: Increase download delay directly
-                self.crawler.engine.downloader.slots['www.amazon.in'].delay = delay**2
-                self.logger.warning("Download delay increased due to consecutive empty responses.")
+                # increase delay exponentially
+                self.delay = round(math.sqrt(self.delay)+1, 0)**2
             else:
-                self.crawler.engine.downloader.slots['www.amazon.in'].delay = delay + 1
-            self.logger.warning(f"Download delay: {self.crawler.engine.downloader.slots['www.amazon.in'].delay}")
+                self.delay += 1
+            self.crawler.engine.downloader.slots['www.amazon.in'].delay = self.delay
+            self.logger.warning(f"Download delay: {self.delay}")
+            self.logger.warning(self.crawler.engine.downloader.slots)
             return
         else:
-            self.none_counter -= 1  # Reset counter if not all None
+            self.none_counter -= 1
+            # decrease delay exponentially
+            self.crawler.engine.downloader.slots['www.amazon.in'].delay = round(math.sqrt(self.delay)-1, 0)**2
             if self.none_counter < 0:
                 self.none_counter = 0
-                self.crawler.engine.downloader.slots['www.amazon.in'].delay = 3
+                self.logger.warning("Resetting empty response counter.")
+                self.delay = self.initial_delay
+                self.crawler.engine.downloader.slots['www.amazon.in'].delay = self.delay
         yield item
 
     def spider_closed(self, spider):
