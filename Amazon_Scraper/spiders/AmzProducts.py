@@ -9,6 +9,8 @@ class AmzproductsSpider(scrapy.Spider):
     name = "AmzProducts"
     allowed_domains = ["www.amazon.in"]
     stg_table_name = 'staging.stg_amz__product'
+    none_counter = 0
+    max_none_counter = 5
     custom_settings = {
         "ITEM_PIPELINES" : {
             "Amazon_Scraper.pipelines.products_pipeline.AmzProductsPipeline": 300,
@@ -17,14 +19,18 @@ class AmzproductsSpider(scrapy.Spider):
             'scrapy.downloadermiddlewares.useragent.UserAgentMiddleware': None,
             'scrapy_user_agents.middlewares.RandomUserAgentMiddleware': 400,
         },
-        "CONCURRENT_REQUESTS" : 7,
-        "DOWNLOAD_DELAY" : 1,
+        "CONCURRENT_REQUESTS" : 4,
+        "CONCURRENT_REQUESTS_PER_DOMAIN" : 2,
+        "DOWNLOAD_DELAY" : 3,
         "RANDOMIZE_DOWNLOAD_DELAY" : True
     }
+
+    handle_httpstatus_list = [404]
 
     def __init__(self, postgres_handler, batch_size = 1, **kwargs):
         self.postgres_handler = postgres_handler
         self.batch_size = int(batch_size)
+        self.failed_urls = list()
 
     @classmethod
     def from_crawler(cls, crawler, *args, **kwargs):
@@ -63,28 +69,35 @@ class AmzproductsSpider(scrapy.Spider):
     
     
     def parse(self, response):
+        if response.status == 404:
+                url = response.url
+                self.failed_urls.append({'asin': response.meta.get('asin'), 'product_url': url, 'status_code': 404, 'error': 'Page not found'})
+                self.logger.warning(f"404 error for: {url}")
+                return  # Do not process further
+
         item = AmazonProductItem()
         item['asin'] = response.meta.get('asin')
         item['category'] = response.xpath('//*[contains(@id,"wayfinding-breadcrumbs")]/ul/li[1]/span/a/text()').get()
         item['lowest_category'] = response.xpath('//*[contains(@id,"wayfinding-breadcrumbs")]/ul/li[last()]/span/a/text()').get()
         item['product_name'] = response.xpath('//*[@id="productTitle"]/text()').get()
         item['seller_id'] = response.xpath(
-                                '//div[contains(@tabular-attribute-name, "Sold by")]//a/@href |'
-                                '//td[@class="alm-mod-sfsb-column"]/span/a/@href'
-                            ).get() or ''
+                '//div[contains(@tabular-attribute-name, "Sold by")]//a/@href |'
+                '//td[@class="alm-mod-sfsb-column"]/span/a/@href'
+            ).get() or ''
         item['seller_name'] = response.xpath('//div[contains(@tabular-attribute-name, "Sold by")]//a/text()').get()
         item['brand_name'] = response.xpath(
-                                '//*[@id="bylineInfo_feature_div"]/div[1]/a/text() | '
-                                '//*[@id="bylineInfo_feature_div"]/div[1]/span/a/text()'
-                            ).get()        
+                '//*[@id="bylineInfo_feature_div"]/div[1]/a/text() | '
+                '//*[@id="bylineInfo_feature_div"]/div[1]/span/a/text()'
+            ).get()        
         item['last_month_sale'] = response.xpath('//*[@id="social-proofing-faceout-title-tk_bought"]/span/text()').get() or '0'
         item['rating'] = response.xpath('//*[@id="averageCustomerReviews"]/span[1]/span[1]/span[1]/a/span/text()').get()
         item['reviews_count'] = response.xpath('//*[@id="averageCustomerReviews"]/span[3]/a/span/text()').get() or '0'
         item['sell_price'] = response.xpath(
-                                '//*[contains(@id, "corePriceDisplay")]/div[1]/span[3]/span[2]/span[2]/text() | '
-                                '//*[contains(@id, "corePrice")]/div/div/span[1]/span[1]/text() | '
-                                '//*[contains(@id, "corePrice")]/div/div/span[1]/span[2]/span[2]/text()'
-                            ).get()
+                '//*[contains(@id, "corePriceDisplay")]/div[1]/span[3]/span[2]/span[2]/text() | '
+                '//*[contains(@id, "corePrice")]/div/div/span[1]/span[1]/text() | '
+                '//*[contains(@id, "corePrice")]/div/div/span[1]/span[2]/span[2]/text() | '
+                '//*[contains(@class, "apexPriceToPay")]/span[1]/text()'
+            ).get()
         item['sell_mrp'] = response.xpath('''//span[contains(text(), "M.R.P.")]/span/span[1]/text()''').get()
         item['launch_date'] = response.xpath(
                 '//th[contains(text(), "Date First Available")]/../td/text() | '
@@ -98,12 +111,33 @@ class AmzproductsSpider(scrapy.Spider):
                 '//*[@id="bylineInfo_feature_div"]/div[1]/span/a/@href'
             ).get())
         item['scrape_date'] = dt.now()  # remove this and have the columns value as default in the staging table
-        is_unavailable = response.xpath("//text()[normalize-space()='Currently unavailable.']").get()
-        item['is_oos'] = True if is_unavailable else False
+        is_unavailable = response.xpath(
+                "//text()[normalize-space()='Currently unavailable.'] | "
+                "//text()[normalize-space()='Temporarily out of stock.']"
+            ).get()
+        is_add_to_cart = response.xpath("//*[contains(text(), 'Add to Cart')]/text()").get()
+        item['is_oos'] = True if is_unavailable or not is_add_to_cart else False
+        
         if item['product_name'] is None:
-            self.log(f"Skipping reason: Page not loading: {response.url}")
+            self.failed_urls.append({'asin': item['asin'], 'product_url': item['product_url'], 'status_code': None, 'error': 'Page not loading properly'})
+            self.none_counter += 1
+            self.logger.warning(f"Consecutive empty response count: {self.none_counter}")
+            delay = self.crawler.engine.downloader.slots['www.amazon.in'].delay
+            if self.none_counter >= self.max_none_counter:
+                # Option 1: Increase download delay directly
+                self.crawler.engine.downloader.slots['www.amazon.in'].delay = delay**2
+                self.logger.warning("Download delay increased due to consecutive empty responses.")
+            else:
+                self.crawler.engine.downloader.slots['www.amazon.in'].delay = delay + 1
+            self.logger.warning(f"Download delay: {self.crawler.engine.downloader.slots['www.amazon.in'].delay}")
             return
+        else:
+            self.none_counter -= 1  # Reset counter if not all None
+            if self.none_counter < 0:
+                self.none_counter = 0
+                self.crawler.engine.downloader.slots['www.amazon.in'].delay = 3
         yield item
 
     def spider_closed(self, spider):
+        self.postgres_handler.bulk_upsert('staging.stg_amz__product_error_urls', self.failed_urls, ["asin"])
         self.postgres_handler.close()
