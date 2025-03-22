@@ -62,10 +62,10 @@ class AmzcategorySpider(scrapy.Spider):
                                //*[@data-asin="{item['asin']}"]/div[1]/div[1]/span/text() 
                                | //*[@data-asin="{item['asin']}"]/div[1]/div[1]/div[1]/span/text()
                             ''').get().replace('#',''))
-            item['product_url'] = response.urljoin(product.xpath(f'//div[@id="{item['asin']}"]/a/@href').get()).split('/ref')[0]
+            item['product_url'] = response.urljoin(product.xpath(f'''//div[@id="{item['asin']}"]/a/@href''').get()).split('/ref')[0]
             # item['load_timestamp'] = dt.now()
             if list_type == "movers_and_shakers":
-                item['sales_rank'] = response.xpath(f'//div[@data-asin="{item['asin']}"]/div[1]/span/text()').get()
+                item['sales_rank'] = response.xpath(f'''//div[@data-asin="{item['asin']}"]/div[1]/span/text()''').get()
             yield item
         
         next_page = response.css("li.a-last > a::attr(href)").get()
