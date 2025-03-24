@@ -11,8 +11,10 @@ class AmzproductsSpider(scrapy.Spider):
     stg_table_name = 'staging.stg_amz__product'
     none_counter = 0
     max_none_counter = 5
-    initial_delay = 1
+    initial_delay = 2
     delay = initial_delay
+    none_response_timestamps = []
+    time_window = 60  # 1 minute in seconds
     
     custom_settings = {
         "ITEM_PIPELINES" : {
@@ -22,10 +24,11 @@ class AmzproductsSpider(scrapy.Spider):
             'scrapy.downloadermiddlewares.useragent.UserAgentMiddleware': None,
             'scrapy_user_agents.middlewares.RandomUserAgentMiddleware': 400,
         },
+        "AUTOTHROTTLE_ENABLED" : False,
+        "RANDOMIZE_DOWNLOAD_DELAY" : True,
         "CONCURRENT_REQUESTS" : 4,
         "CONCURRENT_REQUESTS_PER_DOMAIN" : 4,
         "DOWNLOAD_DELAY" : delay,
-        "RANDOMIZE_DOWNLOAD_DELAY" : False
     }
 
     handle_httpstatus_list = [404]
@@ -123,27 +126,43 @@ class AmzproductsSpider(scrapy.Spider):
         
         # handle empty response and increase delay
         if item['product_name'] is None:
+            current_time = dt.now()
             self.failed_urls.append({'asin': item['asin'], 'product_url': item['product_url'], 'status_code': response.status, 'error': 'Page not loading properly'})
-            self.none_counter += 1
-            self.logger.warning(f"Consecutive empty response count: {self.none_counter}")
+            
+            # Add current timestamp and remove timestamps older than 1 minute
+            self.none_response_timestamps.append(current_time)
+            self.none_response_timestamps = [ts for ts in self.none_response_timestamps 
+                                          if (current_time - ts).total_seconds() <= self.time_window]
+            
+            self.none_counter = len(self.none_response_timestamps)
+            self.logger.warning(f"None responses in last minute: {self.none_counter}")
+            
             if self.none_counter >= self.max_none_counter:
                 # increase delay exponentially
-                self.delay = round(math.sqrt(self.delay)+1, 0)**2
+                self.delay = round(math.sqrt(self.delay)+1, 4)**2
             else:
+                # increase delay linearly
                 self.delay += 1
+                
             self.crawler.engine.downloader.slots['www.amazon.in'].delay = self.delay
             self.logger.warning(f"Download delay: {self.delay}")
             self.logger.warning(self.crawler.engine.downloader.slots)
             return
         else:
-            self.none_counter -= 1
-            # decrease delay exponentially
-            self.crawler.engine.downloader.slots['www.amazon.in'].delay = round(math.sqrt(self.delay)-1, 0)**2
-            if self.none_counter < 0:
-                self.none_counter = 0
-                self.logger.warning("Resetting empty response counter.")
-                self.delay = self.initial_delay
+            # Check if we have any recent none responses
+            current_time = dt.now()
+            self.none_response_timestamps = [ts for ts in self.none_response_timestamps 
+                                          if (current_time - ts).total_seconds() <= self.time_window]
+            
+            if not self.none_response_timestamps:
+                # If no none responses in the last minute, gradually decrease delay
+                self.delay = max(self.initial_delay, round(math.sqrt(self.delay)-1, 4)**2)
                 self.crawler.engine.downloader.slots['www.amazon.in'].delay = self.delay
+                self.logger.warning("No none responses in last minute, decreasing delay")
+            else:
+                self.none_counter = len(self.none_response_timestamps)
+                self.logger.warning(f"Still have {self.none_counter} none responses in last minute")
+                
         yield item
 
     def spider_closed(self, spider):
