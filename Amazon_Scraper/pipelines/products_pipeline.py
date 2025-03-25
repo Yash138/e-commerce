@@ -66,6 +66,8 @@ class AmzProductsPipeline:
         self.items.append(dict(item))
         if len(self.items) >= self.batch_size:
             self.upsert_batch(spider.stg_table_name)
+            self.postgres_handler.execute(f'''call transformed.sp_amz__scd2_update_product_data();''')
+            self.postgres_handler.execute(f'''truncate table {spider.stg_table_name};''')
         return item
   
     def upsert_batch(self, table_name):

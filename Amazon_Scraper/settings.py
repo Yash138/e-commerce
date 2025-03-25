@@ -7,8 +7,7 @@
 #     https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
 #     https://docs.scrapy.org/en/latest/topics/spider-middleware.html
 
-# BOT_NAME = "Amazon_Scraper"
-
+BOT_NAME = "Web Scraper"
 SPIDER_MODULES = ["Amazon_Scraper.spiders"]
 NEWSPIDER_MODULE = "Amazon_Scraper.spiders"
 
@@ -76,7 +75,6 @@ ITEM_PIPELINES = {
 
 # Enable and configure the AutoThrottle extension (disabled by default)
 # See https://docs.scrapy.org/en/latest/topics/autothrottle.html
-AUTOTHROTTLE_ENABLED = False
 AUTOTHROTTLE_ENABLED = True
 # The initial download delay
 AUTOTHROTTLE_START_DELAY = 5
@@ -117,4 +115,3 @@ EXCLUDE_CATEGORIES = [
     'Amazon Launchpad','Amazon Renewed','Apps & Games', 'Books', 'Clothing & Accessories', 
     'Gift Cards','Kindle Store','Movies & TV Shows','Music','Musical Instruments', 'Software', 
     'Toys & Games','Video Games','Watches']
-# EXCLUDE_CATEGORIES = [
