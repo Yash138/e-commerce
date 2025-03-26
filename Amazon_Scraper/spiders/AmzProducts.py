@@ -34,6 +34,14 @@ class AmzproductsSpider(scrapy.Spider):
     handle_httpstatus_list = [404]
 
     def __init__(self, postgres_handler, batch_size = 1, **kwargs):
+        """
+        Initialize the spider with Postgres connection details and batch size.
+
+        :param postgres_handler: An instance of PostgresDBHandler
+        :param batch_size: The number of records to read from Postgres in each batch
+        :param **kwargs: Additional keyword arguments
+        """
+        
         self.postgres_handler = postgres_handler
         self.batch_size = int(batch_size)
         self.failed_urls = list()
@@ -57,12 +65,17 @@ class AmzproductsSpider(scrapy.Spider):
         return spider
     
     def start_requests(self):
+        """
+        This function reads the product urls from the staging table in batches of 'batch_size' and
+        creates a scrapy request for each product url. The asin is passed as meta data to the
+        request. If there is an error while creating the request, the error message is logged.
+        """
         self.postgres_handler.connect()
         for i,row in enumerate(self.postgres_handler.stream_read(
             query="""select * from staging.stg_amz__product_url_feeder """,
             batch_size=self.batch_size
         )):
-            self.log(f"Processing batch {i+1}")
+            self.log(f"Asin Num: {i+1}")
             try:
                 asin = row['asin']
                 product_url = row['product_url']
@@ -73,8 +86,75 @@ class AmzproductsSpider(scrapy.Spider):
             except Exception as e:
                 self.log(f"Error for: {row}\n{e}")
     
-    
+    def _update_none_response_timestamps(self):
+        """Remove timestamps older than the time window and return current count"""
+        current_time = dt.now()
+        self.none_response_timestamps = [
+            ts for ts in self.none_response_timestamps 
+            if (current_time - ts).total_seconds() <= self.time_window
+        ]
+        return current_time, len(self.none_response_timestamps)
+
+    def _adjust_delay(self, new_delay):
+        """Update delay for the Amazon domain"""
+        self.delay = new_delay
+        self.crawler.engine.downloader.slots['www.amazon.in'].delay = self.delay
+        self.logger.warning(f"Download delay adjusted to: {self.delay}")
+
+    def _handle_none_response(self, item, response):
+        """Handle None response by adjusting delay and logging"""
+        current_time, none_count = self._update_none_response_timestamps()
+        
+        # Log failed URL
+        self.failed_urls.append({
+            'asin': item['asin'], 
+            'product_url': item['product_url'], 
+            'status_code': response.status, 
+            'error': 'Page not loading properly'
+        })
+        
+        # Add current timestamp
+        self.none_response_timestamps.append(current_time)
+        self.none_counter = none_count + 1  # Add 1 for current response
+        
+        self.logger.warning(f"None responses in last minute: {self.none_counter}")
+        
+        # Calculate new delay
+        if self.none_counter >= self.max_none_counter:
+            new_delay = round(math.sqrt(self.delay)+1, 4)**2  # exponential increase
+        else:
+            new_delay = self.delay + 1  # linear increase
+            
+        self._adjust_delay(new_delay)
+        return True  # Indicates response was handled
+
+    def _handle_successful_response(self):
+        """Handle successful response by potentially decreasing delay"""
+        current_time, none_count = self._update_none_response_timestamps()
+        
+        if not self.none_response_timestamps:
+            new_delay = max(self.initial_delay, round(math.sqrt(self.delay)-1, 4)**2)
+            self._adjust_delay(new_delay)
+            self.logger.warning("No none responses in last minute, decreasing delay")
+        else:
+            self.none_counter = none_count
+            self.logger.warning(f"Still have {self.none_counter} none responses in last minute")
+        
+        return False  # Indicates response was handled
+
     def parse(self, response):
+        """
+        Parses the Amazon product response to extract product details such as ASIN, category,
+        product name, seller information, pricing, and availability. Handles 404 errors by
+        logging and appending to a failed URLs list. Adjusts download delay based on the
+        frequency of empty responses to manage scraping efficiency.
+
+        :param response: The HTTP response object from a Scrapy request.
+        :type response: scrapy.http.Response
+        :return: Yields an AmazonProductItem populated with the extracted product data.
+        :rtype: Generator
+        """
+
         if response.status == 404:
                 url = response.url
                 self.failed_urls.append({'asin': response.meta.get('asin'), 'product_url': url, 'status_code': response.status, 'error': 'Page not found'})
@@ -126,43 +206,11 @@ class AmzproductsSpider(scrapy.Spider):
         
         # handle empty response and increase delay
         if item['product_name'] is None:
-            current_time = dt.now()
-            self.failed_urls.append({'asin': item['asin'], 'product_url': item['product_url'], 'status_code': response.status, 'error': 'Page not loading properly'})
-            
-            # Add current timestamp and remove timestamps older than 1 minute
-            self.none_response_timestamps.append(current_time)
-            self.none_response_timestamps = [ts for ts in self.none_response_timestamps 
-                                          if (current_time - ts).total_seconds() <= self.time_window]
-            
-            self.none_counter = len(self.none_response_timestamps)
-            self.logger.warning(f"None responses in last minute: {self.none_counter}")
-            
-            if self.none_counter >= self.max_none_counter:
-                # increase delay exponentially
-                self.delay = round(math.sqrt(self.delay)+1, 4)**2
-            else:
-                # increase delay linearly
-                self.delay += 1
-                
-            self.crawler.engine.downloader.slots['www.amazon.in'].delay = self.delay
-            self.logger.warning(f"Download delay: {self.delay}")
-            self.logger.warning(self.crawler.engine.downloader.slots)
-            return
+            if self._handle_none_response(item, response):
+                return
         else:
-            # Check if we have any recent none responses
-            current_time = dt.now()
-            self.none_response_timestamps = [ts for ts in self.none_response_timestamps 
-                                          if (current_time - ts).total_seconds() <= self.time_window]
+            self._handle_successful_response()
             
-            if not self.none_response_timestamps:
-                # If no none responses in the last minute, gradually decrease delay
-                self.delay = max(self.initial_delay, round(math.sqrt(self.delay)-1, 4)**2)
-                self.crawler.engine.downloader.slots['www.amazon.in'].delay = self.delay
-                self.logger.warning("No none responses in last minute, decreasing delay")
-            else:
-                self.none_counter = len(self.none_response_timestamps)
-                self.logger.warning(f"Still have {self.none_counter} none responses in last minute")
-                
         yield item
 
     def spider_closed(self, spider):
