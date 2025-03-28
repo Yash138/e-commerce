@@ -24,14 +24,15 @@ class AmzProductsPipeline:
         """
         Access settings from Scrapy's configuration.
         """
-        postgres_handler = PostgresDBHandler(
+        pipeline = cls(
+            PostgresDBHandler(
                 crawler.settings.get('POSTGRES_HOST'),
                 crawler.settings.get('POSTGRES_DATABASE'),
                 crawler.settings.get('POSTGRES_USERNAME'),
                 crawler.settings.get('POSTGRES_PASSWORD'),
                 crawler.settings.get('POSTGRES_PORT')
-            )
-        return cls(postgres_handler)
+            ))
+        return pipeline
 
     def _clean_item(self, item: Dict[str, Any]) -> Dict[str, Any]:
         """Clean and transform item fields."""
@@ -60,30 +61,39 @@ class AmzProductsPipeline:
         
         return cleaned_item
 
-    def _process_batch_cleanup(self, table_name: str) -> None:
+    def _process_batch_cleanup(self, table_name: str, spider) -> None:
         """Execute cleanup operations after batch processing."""
         self.postgres_handler.execute(self.UPDATE_PRODUCT_DATA_SP)
         self.postgres_handler.execute(self.DELETE_FEEDER_QUERY.format(table_name))
         self.postgres_handler.execute(self.DELETE_ERROR_URLS_QUERY.format(table_name))
         self.postgres_handler.execute(f'truncate table {table_name};')
+        if spider.failed_urls:
+            self.postgres_handler.execute(f'''
+                delete from staging.stg_amz__product_url_feeder 
+                where asin in (
+                    '{"','".join([url["asin"] for url in spider.failed_urls if url['status_code'] == 404])}'
+                )
+            ''')
 
     def open_spider(self, spider):
         """
         Called when the spider is opened.
         """
+        spider.pipeline = self  # ✅ This ensures the spider has access to the pipeline
         self.batch_size = spider.batch_size
         self.postgres_handler.connect()
         self.postgres_handler.execute(f'truncate table {spider.stg_table_name};')
         self.postgres_handler.execute(self.REFRESH_FEEDER_SP)
 
-    def close_spider(self, spider):
+    def close_spider(self, spider, msg=None):
         """
         Called when the spider is closed.
         """
         if self.items:
             self.upsert_batch(spider.stg_table_name)
-        self._process_batch_cleanup(spider.stg_table_name)
+        self._process_batch_cleanup(spider.stg_table_name, spider)
         self.postgres_handler.close()
+        if msg: self.log(f"Closing Spider: {msg}")
 
     def process_item(self, item, spider):
         """

@@ -60,7 +60,7 @@ class AmzproductsSpider(scrapy.Spider):
             )
         spider = cls(postgres_handler, *args, **kwargs)
         spider.crawler = crawler  # Attach the crawler instance
-        
+
         crawler.signals.connect(spider.spider_closed, signal=scrapy.signals.spider_closed)
         return spider
     
@@ -82,9 +82,24 @@ class AmzproductsSpider(scrapy.Spider):
                 yield scrapy.Request(
                     url=product_url, 
                     callback=self.parse,
+                    dont_filter=True,
                     meta={"asin": asin})
             except Exception as e:
                 self.log(f"Error for: {row}\n{e}")
+        
+        if self.pipeline.items:
+            self.log("Batch Cleanup before requeueing!!")
+            self.pipeline.upsert_batch(self.stg_table_name)
+            self.pipeline._process_batch_cleanup(self.stg_table_name, self)
+            # Check if there are still URLs to scrape
+            remaining_urls = self.postgres_handler.read(
+                query="SELECT COUNT(*) as count FROM staging.stg_amz__product_url_feeder"
+            )[0]['count']
+            
+            if remaining_urls > 0:
+                # If URLs remain, call start_requests again
+                self.log(f"Remaining URLs: {remaining_urls}")
+                yield from self.start_requests()
     
     def _update_none_response_timestamps(self):
         """Remove timestamps older than the time window and return current count"""
