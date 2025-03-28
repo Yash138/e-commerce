@@ -104,7 +104,7 @@ class AmzProductsPipeline:
         
         if len(self.items) >= self.batch_size:
             self.upsert_batch(spider.stg_table_name)
-            self._process_batch_cleanup(spider.stg_table_name)
+            self._process_batch_cleanup(spider.stg_table_name, spider)
             
         return item
 
