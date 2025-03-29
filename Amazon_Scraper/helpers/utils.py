@@ -24,6 +24,13 @@ def find_key_path(json_obj, target_key, path=None):
 
     return None  # Return None if the key is not found
 
+def max_depth(d, depth=0):
+    """
+    Recursively finds the maximum depth of a nested dictionary.
+    """
+    if not isinstance(d, dict) or not d:
+        return depth
+    return max(max_depth(v, depth + 1) for v in d.values())
 
 def extract_paths(data):
     
@@ -36,24 +43,26 @@ def extract_paths(data):
         if isinstance(data, dict) and 'category_id' in data:
             path.append(data['category_id'])
         
-        subcategories = [v for k, v in data.items() if isinstance(v, dict) and 'category_id' in v]
+            subcategories = [v for k, v in data.items() if isinstance(v, dict) and 'category_id' in v]
         
-        if subcategories:
-            for subcategory in subcategories:
-                results.extend(dfs(subcategory, path[:]))
-        else:
-            results.append(path)
+            if subcategories:
+                for subcategory in subcategories:
+                    results.extend(dfs(subcategory, path[:]))
+            else:
+                results.append(path)
         
         return results
     output = []
-    for key, value in data.items():
-        for sub_key, sub_value in value.items():
-            output.extend(dfs(sub_value, [key]))
+    for key, value in data['bestsellers'].items():
+        if isinstance(value, dict):
+            for sub_key, sub_value in value.items():
+                output.extend(dfs(sub_value, [key]))
 
-    for i in output:
-        i.remove('bestsellers')
-    df = pd.DataFrame(output, columns=['category']+['lvl'+str(i) for i in range(1, 21)])
-    df['data_node'] = df.iloc[:, 1:22].ffill(axis=1).iloc[:, -1]
+    # for i in output:
+    #     i.remove('bestsellers')
+    depth = max_depth(data['bestsellers'])
+    df = pd.DataFrame(output, columns=['category']+['lvl'+str(i) for i in range(1, depth-1)])
+    df['data_node'] = df.iloc[:, 1:].ffill(axis=1).iloc[:, -1]
     return df.to_dict(orient='records')
 
 def extract_categories(data, results=None):
