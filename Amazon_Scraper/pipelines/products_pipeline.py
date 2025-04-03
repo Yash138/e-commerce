@@ -1,5 +1,5 @@
 from Amazon_Scraper.helpers.db_postgres_handler import PostgresDBHandler
-from Amazon_Scraper.helpers.utils import extract_numeric_part, safe_strip
+from Amazon_Scraper.helpers.utils import extract_numeric_part, safe_strip, safe_split
 
 from datetime import datetime as dt
 import re
@@ -38,6 +38,9 @@ class AmzProductsPipeline:
         """Clean and transform item fields."""
         cleaned_item = {k: safe_strip(v) for k, v in item.items()}
         
+        # extract category id
+        cleaned_item['category'] = safe_split(cleaned_item['category'], 'node=')[-1]
+        cleaned_item['lowest_category'] = safe_split(cleaned_item['lowest_category'], 'node=')[-1]
         # Extract seller ID
         seller_match = re.search(r"seller=([A-Z0-9]+)", cleaned_item['seller_id'])
         cleaned_item['seller_id'] = seller_match.group(1) if seller_match else None
