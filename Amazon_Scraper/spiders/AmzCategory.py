@@ -57,13 +57,11 @@ class AmzcategorySpider(scrapy.Spider):
             item['category'] = category
             item['sub_category'] = subCategory
             item['asin'] = product.xpath(f'//*[@id="p13n-asin-index-{i}"]/div/@data-asin').get()
-            item['rank'] = int(
-                product.xpath(f'''
-                               //*[@data-asin="{item['asin']}"]/div[1]/div[1]/span/text() 
-                               | //*[@data-asin="{item['asin']}"]/div[1]/div[1]/div[1]/span/text()
-                            ''').get().replace('#',''))
-            item['product_url'] = response.urljoin(product.xpath(f'''//div[@id="{item['asin']}"]/a/@href''').get()).split('/ref')[0]
-            # item['load_timestamp'] = dt.now()
+            item['rank'] = product.xpath(f'''
+                //*[@data-asin="{item["asin"]}"]/div[1]/div[1]/span/text() 
+                | //*[@data-asin="{item["asin"]}"]/div[1]/div[1]/div[1]/span/text()
+            ''').get()
+            item['product_url'] = response.urljoin(product.xpath(f'''//div[@id="{item['asin']}"]/a/@href''').get())
             if list_type == "movers_and_shakers":
                 item['sales_rank'] = response.xpath(f'''//div[@data-asin="{item['asin']}"]/div[1]/span/text()''').get()
             yield item

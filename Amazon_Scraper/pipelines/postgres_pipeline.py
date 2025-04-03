@@ -1,5 +1,7 @@
 from Amazon_Scraper.helpers.db_postgres_handler import PostgresDBHandler, AsyncPostgresDBHandler
 from twisted.internet import defer, reactor
+from typing import Dict, Any
+from Amazon_Scraper.helpers.utils import safe_strip, safe_replace, safe_split
 
 class AmzProductRankingStgSyncPipeline:
     def __init__(self, postgres_handler):
@@ -23,6 +25,17 @@ class AmzProductRankingStgSyncPipeline:
             )
         return cls(postgres_handler)
 
+    def _clean_item(self, item: Dict[str, Any]) -> Dict[str, Any]:
+        """Clean and transform item fields."""
+        cleaned_item = {k: safe_strip(v) for k, v in item.items()}
+        # convert to int if not None
+        cleaned_item['rank'] = safe_replace(cleaned_item['rank'], '#', '')
+        if cleaned_item['rank']:
+            cleaned_item['rank'] = int(cleaned_item['rank'])
+        # safe split product_url
+        cleaned_item['product_url'] = safe_split(cleaned_item['product_url'], '/ref')[0]
+        return cleaned_item
+
     def open_spider(self, spider):
         """
         Called when the spider is opened.
@@ -44,7 +57,9 @@ class AmzProductRankingStgSyncPipeline:
         """
         Process each item and insert it into the MongoDB collection.
         """
-        self.items.append(dict(item))
+        # clean the item
+        cleaned_item = self._clean_item(item)
+        self.items.append(dict(cleaned_item))
         if len(self.items) >= self.batch_size:
             self.upsert_batch(spider.table_name)
         return item
