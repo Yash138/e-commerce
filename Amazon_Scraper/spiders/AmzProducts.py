@@ -178,8 +178,8 @@ class AmzproductsSpider(scrapy.Spider):
 
         item = AmazonProductItem()
         item['asin'] = response.meta.get('asin')
-        item['category'] = response.xpath('//*[contains(@id,"wayfinding-breadcrumbs")]/ul/li[1]/span/a/text()').get()
-        item['lowest_category'] = response.xpath('//*[contains(@id,"wayfinding-breadcrumbs")]/ul/li[last()]/span/a/text()').get()
+        item['category'] = response.xpath('//*[contains(@id,"wayfinding-breadcrumbs")]/ul/li[1]/span/a/@href').get()
+        item['lowest_category'] = response.xpath('//*[contains(@id,"wayfinding-breadcrumbs")]/ul/li[last()]/span/a/@href').get()
         item['product_name'] = response.xpath('//*[@id="productTitle"]/text()').get()
         item['seller_id'] = response.xpath(
                 '//div[contains(@tabular-attribute-name, "Sold by")]//a/@href |'
@@ -194,6 +194,7 @@ class AmzproductsSpider(scrapy.Spider):
         item['rating'] = response.xpath('//*[@id="averageCustomerReviews"]/span[1]/span[1]/span[1]/a/span/text()').get()
         item['reviews_count'] = response.xpath('//*[@id="averageCustomerReviews"]/span[3]/a/span/text()').get() or '0'
         item['sell_price'] = response.xpath(
+                '//*[contains(text(),"Price:")]/following-sibling::*//*[contains(text(), "₹")]/text() | '
                 '//*[contains(@id, "corePriceDisplay")]/div[1]/span[3]/span[2]/span[2]/text() | '
                 '//*[contains(@id, "corePrice")]/div/div/span[1]/span[1]/text() | '
                 '//*[contains(@id, "corePrice")]/div/div/span[1]/span[2]/span[2]/text() | '
