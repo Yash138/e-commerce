@@ -107,3 +107,10 @@ def extract_numeric_part(value):
     
 def safe_strip(value):
     return value.strip() if isinstance(value, str) else value
+
+def safe_split(value, delimiter):
+    return value.split(delimiter) if isinstance(value, str) else value
+
+def safe_replace(value, old, new):
+    return value.replace(old, new) if isinstance(value, str) else value
+
