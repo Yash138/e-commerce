@@ -38,7 +38,7 @@ class AmzcategoryurlsSpider(scrapy.Spider):
         self.log(f"Current Depth: {current_depth}")
         for category in response.xpath("//div[@role='treeitem']"):
             category_name = category.xpath("./a/text()").get()
-            category_url = response.urljoin(category.xpath("./a/@href").get())
+            category_url = response.urljoin(category.xpath("./a/@href").get()).split("/ref")[0]
             if (category_name not in self.settings.get('EXCLUDE_CATEGORIES')
                 and category_url.split("/")[-1] != self.settings.get('CATEGORIES')[list_type] 
                 and category_url not in self.visited_url):
