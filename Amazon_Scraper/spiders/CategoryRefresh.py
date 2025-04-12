@@ -33,6 +33,20 @@ class CategoryrefreshSpider(scrapy.Spider):
         category_name = response.meta.get("category_name")
         parent_category_id = response.url.split("/")[-1]
         self.items.setdefault(bs_category, {"category_id":parent_category_id, "category_name":category_name})
+        
+        # avoid adding category if parent is changed
+        current_category = response.xpath('//*[contains(text(),"Any Department")]/../following-sibling::div[not(@role)]/div[@role="treeitem"]/a/@href').get()
+        if current_category:
+            current_category = current_category.split('/ref')[0].split('/')[-1]
+            self.logger.info(f"Current Category ID: {current_category}")
+            self.logger.info(f"Parent Category ID: {response.url.split("/")[-2]}")
+            if current_category != response.url.split("/")[-2]:
+                tmp = list()
+                for i in find_key_path(self.items, parent_category_id):
+                    tmp.append(str(i))
+                eval(f"""self.items[\"{'"]["'.join(tmp[:-1])}\"]""").pop(tmp[-1])
+                return
+        
         for category in response.xpath(f'''
             //div[@role="treeitem"]/span[contains(text(),"{category_name}")]/../following-sibling::div[@role="group"]/div[@role="treeitem"]
         '''):
@@ -58,5 +72,5 @@ class CategoryrefreshSpider(scrapy.Spider):
                 )    
     def closed(self, reason):
         """Save categories to JSON when spider finishes"""
-        with open("./.json/categories_mapping3.json", "w", encoding="utf-8") as f:
+        with open("./.json/categories_mapping_test.json", "w", encoding="utf-8") as f:
             json.dump(self.items, f, indent=4)

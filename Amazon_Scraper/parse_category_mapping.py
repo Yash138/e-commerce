@@ -5,7 +5,7 @@ from helpers.db_postgres_handler import AsyncPostgresDBHandler
 from settings import POSTGRES_HOST, POSTGRES_DATABASE, POSTGRES_USERNAME, POSTGRES_PASSWORD, POSTGRES_PORT
 
 
-with open('./.json/categories_mapping3.json') as f:
+with open('./.json/categories_mapping4.json') as f:
     data = json.load(f)
     
 if data.get("category") == 'bestsellers':
