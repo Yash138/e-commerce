@@ -1,11 +1,17 @@
 import json
 import asyncio
+import sys
 from helpers.utils import extract_paths, extract_categories
 from helpers.db_postgres_handler import AsyncPostgresDBHandler 
 from settings import POSTGRES_HOST, POSTGRES_DATABASE, POSTGRES_USERNAME, POSTGRES_PASSWORD, POSTGRES_PORT
 
+if len(sys.argv) < 2:
+    print("Usage: python parse_category_mapping.py <file_path>")
+    sys.exit(1)
 
-with open('./.json/categories_mapping4.json') as f:
+file_path = sys.argv[1]
+print(f"Reading file: {file_path}")
+with open(file_path) as f:
     data = json.load(f)
     
 if data.get("category") == 'bestsellers':
