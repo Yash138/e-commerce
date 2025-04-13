@@ -335,10 +335,11 @@ class PostgresDBHandler:
         Args:
             table (str): Name of the table.
             data (dict): Dictionary of column-value pairs to update.
-            conditions (str): WHERE clause conditions.
+            conditions (dict): WHERE conditions.
         """
         set_clause = ', '.join([f"{col} = %s" for col in data.keys()])
-        query = f"UPDATE {table} SET {set_clause} WHERE {conditions}"
+        conditions_clause = ' AND '.join([f"{col} = '{value}'" for col, value in conditions.items()])
+        query = f"UPDATE {table} SET {set_clause} WHERE {conditions_clause}"
         
         try:
             with self.connection.cursor() as cursor:
