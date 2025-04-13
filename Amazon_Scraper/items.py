@@ -38,3 +38,4 @@ class AmazonProductItem(scrapy.Item):
     product_url = scrapy.Field()
     brand_store_url = scrapy.Field()
     scrape_date = scrapy.Field()
+    spider_name = scrapy.Field()
