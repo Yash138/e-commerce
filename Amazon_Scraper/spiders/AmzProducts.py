@@ -24,7 +24,7 @@ class AmzproductsSpider(scrapy.Spider):
             'scrapy.downloadermiddlewares.useragent.UserAgentMiddleware': None,
             'scrapy_user_agents.middlewares.RandomUserAgentMiddleware': 400,
         },
-        "AUTOTHROTTLE_ENABLED" : False,
+        "AUTOTHROTTLE_ENABLED" : True,
         "RANDOMIZE_DOWNLOAD_DELAY" : True,
         "CONCURRENT_REQUESTS" : 4,
         "CONCURRENT_REQUESTS_PER_DOMAIN" : 4,
@@ -178,8 +178,14 @@ class AmzproductsSpider(scrapy.Spider):
 
         item = AmazonProductItem()
         item['asin'] = response.meta.get('asin')
-        item['category'] = response.xpath('//*[contains(@id,"wayfinding-breadcrumbs")]/ul/li[1]/span/a/@href').get()
-        item['lowest_category'] = response.xpath('//*[contains(@id,"wayfinding-breadcrumbs")]/ul/li[last()]/span/a/@href').get()
+        item['category'] = response.xpath(
+            '//*[contains(@id,"wayfinding-breadcrumbs")]/ul/li[1]/span/a/@href | '
+            '//*[contains(text(),"Best Sellers Rank")]/following-sibling::td/span/span[1]/a/@href'
+        ).get() or ''
+        item['lowest_category'] = response.xpath(
+            '//*[contains(@id,"wayfinding-breadcrumbs")]/ul/li[last()]/span/a/@href | '
+            '//*[contains(text(),"Best Sellers Rank")]/following-sibling::td/span/span[last()]/a/@href'
+        ).get() or ''
         item['product_name'] = response.xpath('//*[@id="productTitle"]/text()').get()
         item['seller_id'] = response.xpath(
                 '//div[contains(@tabular-attribute-name, "Sold by")]//a/@href |'
@@ -191,7 +197,7 @@ class AmzproductsSpider(scrapy.Spider):
                 '//*[@id="bylineInfo_feature_div"]/div[1]/span/a/text()'
             ).get()        
         item['last_month_sale'] = response.xpath('//*[@id="social-proofing-faceout-title-tk_bought"]/span/text()').get() or '0'
-        item['rating'] = response.xpath('//*[@id="averageCustomerReviews"]/span[1]/span[1]/span[1]/a/span/text()').get()
+        item['rating'] = response.xpath('//*[@id="averageCustomerReviews"]/span[1]/span[1]/span[1]/a/span/text()').get() or ''
         item['reviews_count'] = response.xpath('//*[@id="averageCustomerReviews"]/span[3]/a/span/text()').get() or '0'
         item['sell_price'] = response.xpath(
                 '//*[contains(text(),"Price:")]/following-sibling::*//*[contains(text(), "₹")]/text() | '
@@ -219,7 +225,7 @@ class AmzproductsSpider(scrapy.Spider):
             ).get()
         is_add_to_cart = response.xpath("//*[contains(text(), 'Add to Cart')]/text()").get()
         item['is_oos'] = True if is_unavailable or not is_add_to_cart else False
-        
+        item['spider_name'] = self.name
         # handle empty response and increase delay
         if item['product_name'] is None:
             if self._handle_none_response(item, response):
