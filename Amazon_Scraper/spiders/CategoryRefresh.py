@@ -1,6 +1,8 @@
 import scrapy
 from scrapy.http import Request
+from scrapy.exceptions import CloseSpider
 import json
+import os
 from Amazon_Scraper.helpers.utils import find_key_path, extract_paths
 
 class CategoryrefreshSpider(scrapy.Spider):
@@ -12,11 +14,20 @@ class CategoryrefreshSpider(scrapy.Spider):
         "ITEM_PIPELINES":{}
     }
     
-    def __init__(self, *args, **kwargs):
+    def __init__(self, output_file=None, *args, **kwargs):
         self.items = dict()
         self.visited_url = set()
+        # stop the spider if the output file already exists or if the file is not provided
+        if output_file and os.path.exists(output_file):
+            raise CloseSpider(f"Output file {output_file} already exists. Spider will not run.")
+        if not output_file:
+            raise CloseSpider("No output file provided. Spider will not run.")
+
+        self.output_file = output_file
+        self.logger.info(f"Output file: {self.output_file}")
         
     def parse(self, response):
+        # update the bs_category and category_name as per start_url
         bs_category = "bestsellers"
         category_name = "Any Department"
         yield Request(
@@ -38,8 +49,6 @@ class CategoryrefreshSpider(scrapy.Spider):
         current_category = response.xpath('//*[contains(text(),"Any Department")]/../following-sibling::div[not(@role)]/div[@role="treeitem"]/a/@href').get()
         if current_category:
             current_category = current_category.split('/ref')[0].split('/')[-1]
-            self.logger.info(f"Current Category ID: {current_category}")
-            self.logger.info(f"Parent Category ID: {response.url.split("/")[-2]}")
             if current_category != response.url.split("/")[-2]:
                 tmp = list()
                 for i in find_key_path(self.items, parent_category_id):
@@ -72,5 +81,5 @@ class CategoryrefreshSpider(scrapy.Spider):
                 )    
     def closed(self, reason):
         """Save categories to JSON when spider finishes"""
-        with open("./.json/categories_mapping_test.json", "w", encoding="utf-8") as f:
+        with open(self.output_file, "w", encoding="utf-8") as f:
             json.dump(self.items, f, indent=4)
