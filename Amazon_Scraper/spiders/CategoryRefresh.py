@@ -50,10 +50,10 @@ class CategoryrefreshSpider(scrapy.Spider):
         if current_category:
             current_category = current_category.split('/ref')[0].split('/')[-1]
             if current_category != response.url.split("/")[-2]:
-                tmp = list()
-                for i in find_key_path(self.items, parent_category_id):
-                    tmp.append(str(i))
-                eval(f"""self.items[\"{'"]["'.join(tmp[:-1])}\"]""").pop(tmp[-1])
+                # tmp = list()
+                # for i in find_key_path(self.items, parent_category_id):
+                #     tmp.append(str(i))
+                # eval(f"""self.items[\"{'"]["'.join(tmp[:-1])}\"]""").pop(tmp[-1])
                 return
         
         for category in response.xpath(f'''
