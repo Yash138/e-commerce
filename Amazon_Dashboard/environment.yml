@@ -1,0 +1,13 @@
+name: streamlit_dashboard
+channels:
+  - defaults
+dependencies:
+  - python=3.12
+  - ipykernel
+  - pandas
+  - anaconda::streamlit
+  - anaconda::psycopg2
+  - conda-forge::plotly
+  - conda-forge::matplotlib
+  - pip
+prefix: C:\Users\yashl\.conda\envs\streamlit_dashboard
