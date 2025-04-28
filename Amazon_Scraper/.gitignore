@@ -1,0 +1,11 @@
+# logs
+*.log
+logs/
+
+# output
+.json
+.urls_to_scrap
+
+# virtual environment
+.venv/
+__pycache__
