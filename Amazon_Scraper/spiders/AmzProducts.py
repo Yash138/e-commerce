@@ -2,10 +2,13 @@ import scrapy
 import scrapy.signals
 from Amazon_Scraper.items import AmazonProductItem
 from Amazon_Scraper.helpers.db_postgres_handler import PostgresDBHandler
+from Amazon_Scraper.helpers.delay_handler import DelayHandler
+from Amazon_Scraper.helpers.utils import setup_logger  # Import setup_logger
+from Amazon_Scraper.helpers.constants import LOG_DIR  # Import LOG_DIR
 from datetime import datetime as dt
 import math
 
-class AmzproductsSpider(scrapy.Spider):
+class AmzproductsSpider(scrapy.Spider, DelayHandler):
     name = "AmzProducts"
     allowed_domains = ["www.amazon.in"]
     stg_table_name = 'staging.stg_amz__product'
@@ -45,6 +48,17 @@ class AmzproductsSpider(scrapy.Spider):
         self.postgres_handler = postgres_handler
         self.batch_size = int(batch_size)
         self.failed_urls = list()
+        log_file = f"{LOG_DIR}/{self.name}.log"  # Define log file path
+        self.custom_logger = setup_logger(self.name, log_file)  # Initialize custom logger
+        self.custom_logger.info("Logger initialized for AmzProducts spider")  # Log initialization message
+        DelayHandler.__init__(
+            self, 
+            initial_delay=self.initial_delay, 
+            max_none_counter=self.max_none_counter, 
+            time_window=self.time_window, 
+            custom_logger=self.custom_logger,  # Pass custom logger to DelayHandler
+            crawler=None  # Will be set in from_crawler
+        )
 
     @classmethod
     def from_crawler(cls, crawler, *args, **kwargs):
@@ -60,7 +74,7 @@ class AmzproductsSpider(scrapy.Spider):
             )
         spider = cls(postgres_handler, *args, **kwargs)
         spider.crawler = crawler  # Attach the crawler instance
-
+        
         crawler.signals.connect(spider.spider_closed, signal=scrapy.signals.spider_closed)
         return spider
     
@@ -75,7 +89,7 @@ class AmzproductsSpider(scrapy.Spider):
             query="""select * from staging.stg_amz__product_url_feeder """,
             batch_size=self.batch_size
         )):
-            self.log(f"Asin Num: {i+1}")
+            self.custom_logger.info(f"Asin Num: {i+1}")
             try:
                 asin = row['asin']
                 product_url = row['product_url']
@@ -85,10 +99,10 @@ class AmzproductsSpider(scrapy.Spider):
                     dont_filter=True,
                     meta={"asin": asin})
             except Exception as e:
-                self.log(f"Error for: {row}\n{e}")
+                self.custom_logger.error(f"Error for: {row}\n{e}")
         
         if self.pipeline.items:
-            self.log("Batch Cleanup before requeueing!!")
+            self.custom_logger.info("Batch Cleanup before requeueing!!")
             self.pipeline.upsert_batch(self.stg_table_name)
             self.pipeline._process_batch_cleanup(self.stg_table_name, self)
             # Check if there are still URLs to scrape
@@ -98,64 +112,8 @@ class AmzproductsSpider(scrapy.Spider):
             
             if remaining_urls > 0:
                 # If URLs remain, call start_requests again
-                self.log(f"Remaining URLs: {remaining_urls}")
+                self.custom_logger.info(f"Remaining URLs: {remaining_urls}")
                 yield from self.start_requests()
-    
-    def _update_none_response_timestamps(self):
-        """Remove timestamps older than the time window and return current count"""
-        current_time = dt.now()
-        self.none_response_timestamps = [
-            ts for ts in self.none_response_timestamps 
-            if (current_time - ts).total_seconds() <= self.time_window
-        ]
-        return current_time, len(self.none_response_timestamps)
-
-    def _adjust_delay(self, new_delay):
-        """Update delay for the Amazon domain"""
-        self.delay = new_delay
-        self.crawler.engine.downloader.slots['www.amazon.in'].delay = self.delay
-        self.logger.warning(f"Download delay adjusted to: {self.delay}")
-
-    def _handle_none_response(self, item, response):
-        """Handle None response by adjusting delay and logging"""
-        current_time, none_count = self._update_none_response_timestamps()
-        
-        # Log failed URL
-        self.failed_urls.append({
-            'asin': item['asin'], 
-            'product_url': item['product_url'], 
-            'status_code': response.status, 
-            'error': 'Page not loading properly'
-        })
-        
-        # Add current timestamp
-        self.none_response_timestamps.append(current_time)
-        self.none_counter = none_count + 1  # Add 1 for current response
-        
-        self.logger.warning(f"None responses in last minute: {self.none_counter}")
-        
-        # Calculate new delay
-        if self.none_counter >= self.max_none_counter:
-            new_delay = round(math.sqrt(self.delay)+1, 4)**2  # exponential increase
-        else:
-            new_delay = self.delay + 1  # linear increase
-            
-        self._adjust_delay(new_delay)
-        return True  # Indicates response was handled
-
-    def _handle_successful_response(self):
-        """Handle successful response by potentially decreasing delay"""
-        current_time, none_count = self._update_none_response_timestamps()
-        
-        if not self.none_response_timestamps:
-            new_delay = max(self.initial_delay, round(math.sqrt(self.delay)-1, 4)**2)
-            self._adjust_delay(new_delay)
-            self.logger.warning("No none responses in last minute, decreasing delay")
-        else:
-            self.none_counter = none_count
-            self.logger.warning(f"Still have {self.none_counter} none responses in last minute")
-        
-        return False  # Indicates response was handled
 
     def parse(self, response):
         """
@@ -173,7 +131,7 @@ class AmzproductsSpider(scrapy.Spider):
         if response.status == 404:
                 url = response.url
                 self.failed_urls.append({'asin': response.meta.get('asin'), 'product_url': url, 'status_code': response.status, 'error': 'Page not found'})
-                self.logger.warning(f"404 error for: {url}")
+                self.custom_logger.warning(f"404 error for: {url}")
                 return  # Do not process further
 
         item = AmazonProductItem()
@@ -228,13 +186,14 @@ class AmzproductsSpider(scrapy.Spider):
         item['spider_name'] = self.name
         # handle empty response and increase delay
         if item['product_name'] is None:
-            if self._handle_none_response(item, response):
+            if self.handle_none_response(self.failed_urls, item, response):
                 return
         else:
-            self._handle_successful_response()
+            self.handle_successful_response()
             
         yield item
 
     def spider_closed(self, spider):
-        self.postgres_handler.bulk_upsert('staging.stg_amz__product_error_urls', self.failed_urls, ["asin"])
+        if self.failed_urls:
+            self.postgres_handler.bulk_upsert('staging.stg_amz__product_error_urls', self.failed_urls, ["asin"])
         self.postgres_handler.close()
