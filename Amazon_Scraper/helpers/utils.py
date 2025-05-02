@@ -1,6 +1,31 @@
 import pandas as pd
 import re
 
+# logger function having file rotation, and limiting the size of the log file and number of backup files
+import logging
+from logging.handlers import RotatingFileHandler
+import os
+from datetime import datetime as dt
+from Amazon_Scraper.helpers.constants import LOG_DIR, LOG_FILE_SIZE, LOG_BACKUP_COUNT
+
+def setup_logger(name, log_file, level=logging.INFO):
+    """Function to setup a logger with file rotation."""
+    if not os.path.exists(LOG_DIR):
+        os.makedirs(LOG_DIR)
+    
+    handler = RotatingFileHandler(log_file, maxBytes=LOG_FILE_SIZE, backupCount=LOG_BACKUP_COUNT)
+    formatter = logging.Formatter(
+        '%(asctime)s - %(filename)s:%(lineno)d - %(levelname)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+    handler.setFormatter(formatter)
+
+    logger = logging.getLogger(name)
+    logger.setLevel(level)
+    logger.addHandler(handler)
+    
+    return logger
+
 def find_key_path(json_obj, target_key, path=None):
     """Recursively searches for a key in a nested JSON structure and returns the path to it."""
     if path is None:
