@@ -48,15 +48,15 @@ class AmzproductsSpider(scrapy.Spider, DelayHandler):
         self.postgres_handler = postgres_handler
         self.batch_size = int(batch_size)
         self.failed_urls = list()
-        log_file = f"{LOG_DIR}/{self.name}.log"  # Define log file path
-        self.custom_logger = setup_logger(self.name, log_file)  # Initialize custom logger
-        self.custom_logger.info("Logger initialized for AmzProducts spider")  # Log initialization message
+        # log_file = f"{LOG_DIR}/{self.name}.log"  # Define log file path
+        # self.custom_logger = setup_logger(self.name, log_file)  # Initialize custom logger
+        # self.custom_logger.info("Logger initialized for AmzProducts spider")  # Log initialization message
         DelayHandler.__init__(
             self, 
             initial_delay=self.initial_delay, 
             max_none_counter=self.max_none_counter, 
             time_window=self.time_window, 
-            custom_logger=self.custom_logger,  # Pass custom logger to DelayHandler
+            log=self.log,  # Pass custom logger to DelayHandler
             crawler=None  # Will be set in from_crawler
         )
 
@@ -89,7 +89,7 @@ class AmzproductsSpider(scrapy.Spider, DelayHandler):
             query="""select * from staging.stg_amz__product_url_feeder """,
             batch_size=self.batch_size
         )):
-            self.custom_logger.info(f"Asin Num: {i+1}")
+            self.log(f"Asin Num: {i+1}", 20)
             try:
                 asin = row['asin']
                 product_url = row['product_url']
@@ -99,10 +99,10 @@ class AmzproductsSpider(scrapy.Spider, DelayHandler):
                     dont_filter=True,
                     meta={"asin": asin})
             except Exception as e:
-                self.custom_logger.error(f"Error for: {row}\n{e}")
+                self.log(f"Error for: {row}\n{e}", 40)
         
         if self.pipeline.items:
-            self.custom_logger.info("Batch Cleanup before requeueing!!")
+            self.log("Batch Cleanup before requeueing!!", 20)
             self.pipeline.upsert_batch(self.stg_table_name)
             self.pipeline._process_batch_cleanup(self.stg_table_name, self)
             # Check if there are still URLs to scrape
@@ -112,7 +112,7 @@ class AmzproductsSpider(scrapy.Spider, DelayHandler):
             
             if remaining_urls > 0:
                 # If URLs remain, call start_requests again
-                self.custom_logger.info(f"Remaining URLs: {remaining_urls}")
+                self.log(f"Remaining URLs: {remaining_urls}", 20)
                 yield from self.start_requests()
 
     def parse(self, response):
@@ -131,7 +131,7 @@ class AmzproductsSpider(scrapy.Spider, DelayHandler):
         if response.status == 404:
                 url = response.url
                 self.failed_urls.append({'asin': response.meta.get('asin'), 'product_url': url, 'status_code': response.status, 'error': 'Page not found'})
-                self.custom_logger.warning(f"404 error for: {url}")
+                self.log(f"404 error for: {url}", 30)
                 return  # Do not process further
 
         item = AmazonProductItem()

@@ -2,14 +2,14 @@ from datetime import datetime as dt
 import math
 
 class DelayHandler:
-    def __init__(self, initial_delay, max_none_counter, time_window, custom_logger, crawler):
+    def __init__(self, initial_delay, max_none_counter, time_window, log, crawler):
         self.initial_delay = initial_delay
         self.delay = initial_delay
         self.max_none_counter = max_none_counter
         self.time_window = time_window
         self.none_response_timestamps = []
         self.none_counter = 0
-        self.custom_logger = custom_logger  # Use custom_logger instead of logger
+        self.log = log
         self.crawler = crawler
 
     def _update_none_response_timestamps(self):
@@ -25,7 +25,7 @@ class DelayHandler:
         """Update delay for the Amazon domain"""
         self.delay = new_delay
         self.crawler.engine.downloader.slots['www.amazon.in'].delay = self.delay
-        self.custom_logger.warning(f"Download delay adjusted to: {self.delay}")
+        self.log(f"Download delay adjusted to: {self.delay}", 30)
 
     def handle_none_response(self, failed_urls, item, response):
         """Handle None response by adjusting delay and logging"""
@@ -44,7 +44,7 @@ class DelayHandler:
         self.none_response_timestamps.append(current_time)
         self.none_counter = none_count + 1  # Add 1 for current response
         
-        self.custom_logger.warning(f"None responses in last minute: {self.none_counter}")
+        self.log(f"None responses in last minute: {self.none_counter}", 30)
         
         # Calculate new delay
         if self.none_counter >= self.max_none_counter:
@@ -62,9 +62,9 @@ class DelayHandler:
         if not self.none_response_timestamps:
             new_delay = max(self.initial_delay, round(math.sqrt(self.delay)-1, 4)**2)
             self._adjust_delay(new_delay)
-            self.custom_logger.warning("No none responses in last minute, decreasing delay")
+            self.log(f"No none responses in last minute, decreasing delay", 30)
         else:
             self.none_counter = none_count
-            self.custom_logger.warning(f"Still have {self.none_counter} none responses in last minute")
+            self.log(f"Still have {self.none_counter} none responses in last minute", 30)
         
         return False  # Indicates response was handled
