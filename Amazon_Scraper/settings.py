@@ -117,6 +117,11 @@ EXCLUDE_CATEGORIES = [
     'Gift Cards','Kindle Store','Movies & TV Shows','Music','Musical Instruments', 'Software', 
     'Toys & Games','Video Games','Watches']
 
+EXCLUDE_CATEGORIES_IDS = [
+    'boost','amazon-renewed','mobile-apps', 'books', 'apparel', 
+    'gift-cards','digital-text','dvd','music','musical-instruments', 'software', 
+    'toys','videogames','watches']
+
 # Logger Settings
 import os
 
