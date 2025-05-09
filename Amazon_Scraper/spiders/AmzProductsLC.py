@@ -33,7 +33,7 @@ class AmzproductslcSpider(scrapy.Spider, DelayHandler):
         "RETRY_DELAY" : 120,
     }
 
-    def __init__(self, postgres_handler, batch_size = 1, category = None, lowest_category = None, retry_count = 3, **kwargs):
+    def __init__(self, postgres_handler, batch_size = 1, category = None, lowest_category = None, retry_count = 3, crawler=None, **kwargs):
         """
         Initialize the spider with Postgres connection details and batch size.
 
@@ -56,11 +56,11 @@ class AmzproductslcSpider(scrapy.Spider, DelayHandler):
         self.is_retry_scheduler = False  # Track if we're in retry scheduler mode
         DelayHandler.__init__(
             self,
-            initial_delay=2,  # Set initial delay
+            initial_delay=crawler.settings.get('DOWNLOAD_DELAY'),  # Set initial delay
             max_none_counter=2,  # Set max none counter
             time_window=60,  # Set time window in seconds
             log=self.log,
-            crawler=self.crawler  # Will be set in from_crawler
+            crawler=crawler  # Will be set in from_crawler
         )
         
     @classmethod
@@ -75,7 +75,7 @@ class AmzproductslcSpider(scrapy.Spider, DelayHandler):
                 crawler.settings['POSTGRES_PASSWORD'],
                 crawler.settings['POSTGRES_PORT']
             )   
-        spider = cls(postgres_handler, *args, **kwargs)
+        spider = cls(postgres_handler, *args, crawler=crawler, **kwargs)
         spider.crawler = crawler  # Attach the crawler instance
         spider.settings = crawler.settings
         
@@ -92,7 +92,7 @@ class AmzproductslcSpider(scrapy.Spider, DelayHandler):
             lc_cond = f" and lowest_category = '{self.lowest_category}'" if self.lowest_category else ""
             cond = category_cond + lc_cond + f" and (scraping_mandatory is True or refreshed_pages_upto < {self.settings.get('DEPTH_LIMIT')})"
             query = f"select * from transformed.vw_amz__pending_category_refresh where {cond}"
-            self.log(f"Query: '''{query}'''", 20)
+            self.log(f"Query: {query}", 20)
             for row in self.postgres_handler.stream_read(
                 query=query,
                 batch_size=self.batch_size
@@ -193,13 +193,13 @@ class AmzproductslcSpider(scrapy.Spider, DelayHandler):
             self.update_category.append(
                 {"category": category, "lowest_category": lowest_category, "total_pages": self.total_pages, "refreshed_pages_upto": current_page, "last_refresh_timestamp": dt.now()} 
             )
+        product_count = 0
         # if refreshed_pages_upto <= current_page, then skip the pages already processed and start from the next page
         if current_page <= response.meta['refreshed_pages_upto'] and current_page != 0:
             self.log(f"Skipping already processed pages for category: {category}, lowest_category: {lowest_category}, current_page: {current_page}, already_refreshed_pages_upto: {response.meta['refreshed_pages_upto']}", 20)
         else:
             # Extract product details
             item = AmazonProductItem()
-            product_count = 0
             for product in response.xpath('//div[@role="listitem"]'):
                 asin = product.xpath('@data-asin').get()
                 if asin in self.processed_asins:
