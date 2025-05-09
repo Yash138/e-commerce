@@ -8,7 +8,7 @@ scrapy crawl AmzCategory -a list_type=hot_new_releases -a batch_size=500 --logfi
 scrapy crawl AmzCategory -a list_type=most_wished_for -a batch_size=500 --logfile=./logs/amz_category_most_wished_for.log
 
 scrapy crawl AmzProducts -a batch_size=100 --logfile=./logs/amz_product1.log 
-    
+
 scrapy crawl AmzProductsLC -a batch_size=100 -s DEPTH_LIMIT=50 --logfile=./logs/amz_lc.log 
 # -o ./.json/lc_output.json
 scrapy crawl AmzProductsLC -a batch_size=100 -s DEPTH_LIMIT=10 --logfile=./logs/amz_lc.log -o ./.json/product_lc_output.json

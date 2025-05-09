@@ -36,7 +36,7 @@ class AmzproductsSpider(scrapy.Spider, DelayHandler):
 
     handle_httpstatus_list = [404]
 
-    def __init__(self, postgres_handler, batch_size = 1, **kwargs):
+    def __init__(self, postgres_handler, batch_size = 1, crawler=None, **kwargs):
         """
         Initialize the spider with Postgres connection details and batch size.
 
@@ -53,11 +53,11 @@ class AmzproductsSpider(scrapy.Spider, DelayHandler):
         # self.custom_logger.info("Logger initialized for AmzProducts spider")  # Log initialization message
         DelayHandler.__init__(
             self, 
-            initial_delay=self.initial_delay, 
+            initial_delay=crawler.settings.get('DOWNLOAD_DELAY'), 
             max_none_counter=self.max_none_counter, 
             time_window=self.time_window, 
             log=self.log,  # Pass custom logger to DelayHandler
-            crawler=None  # Will be set in from_crawler
+            crawler=crawler  # Will be set in from_crawler
         )
 
     @classmethod
@@ -72,7 +72,7 @@ class AmzproductsSpider(scrapy.Spider, DelayHandler):
                 crawler.settings.get('POSTGRES_PASSWORD'),
                 crawler.settings.get('POSTGRES_PORT')
             )
-        spider = cls(postgres_handler, *args, **kwargs)
+        spider = cls(postgres_handler, *args, crawler=crawler, **kwargs)
         spider.crawler = crawler  # Attach the crawler instance
         
         crawler.signals.connect(spider.spider_closed, signal=scrapy.signals.spider_closed)
@@ -103,7 +103,7 @@ class AmzproductsSpider(scrapy.Spider, DelayHandler):
         
         if self.pipeline.items:
             self.log("Batch Cleanup before requeueing!!", 20)
-            self.pipeline.upsert_batch(self.stg_table_name)
+            self.pipeline.upsert_batch(self.stg_table_name, self)
             self.pipeline._process_batch_cleanup(self.stg_table_name, self)
             # Check if there are still URLs to scrape
             remaining_urls = self.postgres_handler.read(
@@ -130,7 +130,9 @@ class AmzproductsSpider(scrapy.Spider, DelayHandler):
 
         if response.status == 404:
                 url = response.url
-                self.failed_urls.append({'asin': response.meta.get('asin'), 'product_url': url, 'status_code': response.status, 'error': 'Page not found'})
+                asin = response.meta.get('asin')
+                if asin not in [url['asin'] for url in self.failed_urls]:
+                    self.failed_urls.append({'asin': asin, 'product_url': url, 'status_code': response.status, 'error': 'Page not found'})
                 self.log(f"404 error for: {url}", 30)
                 return  # Do not process further
 
