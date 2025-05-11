@@ -191,7 +191,7 @@ class AmzproductsSpider(scrapy.Spider, DelayHandler):
             if self.handle_none_response(self.failed_urls, item, response):
                 return
         else:
-            self.handle_successful_response()
+            self.handle_successful_response(response)
             
         yield item
 

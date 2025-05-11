@@ -27,10 +27,12 @@ class AmzproductslcSpider(scrapy.Spider, DelayHandler):
         },
         "DOWNLOAD_DELAY" : 15,
         "RANDOMIZE_DOWNLOAD_DELAY" : True,
-        "CONCURRENT_REQUESTS" : 4,
-        "CONCURRENT_REQUESTS_PER_DOMAIN" : 4,
-        "CONCURRENT_REQUESTS_PER_IP" : 4,
-        "RETRY_DELAY" : 120,
+        "CONCURRENT_REQUESTS" : 2,
+        "CONCURRENT_REQUESTS_PER_DOMAIN" : 2,
+        "CONCURRENT_REQUESTS_PER_IP" : 2,
+        "COOKIES_ENABLED" : True,
+        "RETRY_TIMES": 1,
+        "RETRY_DELAY" : 15,
     }
 
     def __init__(self, postgres_handler, batch_size = 1, category = None, lowest_category = None, retry_count = 3, crawler=None, **kwargs):
@@ -105,7 +107,8 @@ class AmzproductslcSpider(scrapy.Spider, DelayHandler):
                     url = f"https://www.amazon.in/s?i={row['category']}&rh=n%3A{row['lowest_category']}&s=popularity-rank&fs=true"
                 else:
                     current_page = row['refreshed_pages_upto']
-                    url = f"https://www.amazon.in/s?i={row['category']}&rh=n%3A{row['lowest_category']}&s=popularity-rank&fs=true&page={current_page}"
+                    url = f"https://www.amazon.in/s?i={row['category']}&rh=n%3A{row['lowest_category']}&s=popularity-rank&fs=true&page={current_page}&qid={round(dt.timestamp(dt.now()))}&ref=sr_pg_{current_page-1}"
+                    #  "https://www.amazon.in/s?i=computers&rh=n%3A1375325031&s=popularity-rank&fs=true&page=8&qid=1746819223&xpid=hFmZFOPx371or&ref=sr_pg_7"
                 yield scrapy.Request(
                     url=url, 
                     callback=self.parse, 
@@ -171,10 +174,11 @@ class AmzproductslcSpider(scrapy.Spider, DelayHandler):
                     'error': 'Service Unavailable (503)',
                     'retry_count': 1,
                     'total_pages': response.meta.get('total_pages', 0),
-                    'refreshed_pages_upto': response.meta.get('page', 0) - 1
+                    'refreshed_pages_upto': response.meta.get('page', 0) - 1 if not response.meta.get('initial_run', False) else response.meta.get('page', 0)
                 }
                 self.failed_urls.append(failed_url_data)
             return
+        self.handle_successful_response(response)
         self.log(f"Processing category: {category}, lowest_category: {lowest_category}", 20)
         
         # Get current page number from meta or default to 0
@@ -274,7 +278,7 @@ class AmzproductslcSpider(scrapy.Spider, DelayHandler):
                         "refreshed_pages_upto": row["refreshed_pages_upto"],
                         "total_pages": row["total_pages"],
                         "last_refresh_timestamp": row["last_refresh_timestamp"],
-                        "products_per_page": row["products_per_page"]
+                        "products_per_page": row.get("products_per_page", 0)
                     },
                     conditions={
                         "category": row["category"],
