@@ -129,7 +129,7 @@ import os
 LOG_DIR = os.path.join(os.getcwd(), "logs")
 
 # Maximum size of a log file in bytes (e.g., 10 MB)
-LOG_ROTATING_MAX_BYTES = 10 * 1024 * 1024
+LOG_ROTATING_MAX_BYTES = 5 * 1024 * 1024
 
 # Number of backup log files to keep
 LOG_ROTATING_BACKUP_COUNT = 5
