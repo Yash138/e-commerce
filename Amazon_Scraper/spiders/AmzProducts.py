@@ -1,7 +1,7 @@
 import scrapy
 import scrapy.signals
 from Amazon_Scraper.items import AmazonProductItem
-from Amazon_Scraper.helpers.db_postgres_handler import PostgresDBHandler
+from Amazon_Scraper.helpers.postgres_handler import PostgresDBHandler
 from Amazon_Scraper.helpers.delay_handler import DelayHandler
 from Amazon_Scraper.helpers.utils import setup_logger  # Import setup_logger
 from Amazon_Scraper.helpers.constants import LOG_DIR  # Import LOG_DIR
