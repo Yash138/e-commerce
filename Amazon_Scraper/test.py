@@ -1,21 +1,23 @@
-import json
 import asyncio
-from helpers.utils import extract_paths
-from helpers.db_postgres_handler import AsyncPostgresDBHandler 
+import json
+from helpers.db_postgres_handler import AsyncPostgresDBHandler, PostgresDBHandler 
 from settings import POSTGRES_HOST, POSTGRES_DATABASE, POSTGRES_USERNAME, POSTGRES_PASSWORD, POSTGRES_PORT
 
 
-with open('categories_mapping.json') as f:
-    data = json.load(f)
-    
-data_dict = extract_paths(data)
-if data_dict[0]["category"] == 'bestsellers':
-    data_dict.pop(0)
-
-async def main():    
+async def main(batch_size=10):
+    items = list()
     db = AsyncPostgresDBHandler(POSTGRES_HOST, POSTGRES_DATABASE, POSTGRES_USERNAME, POSTGRES_PASSWORD, POSTGRES_PORT)
     await db.connect()
-    await db.bulk_upsert("curated.category_hierarchy", data_dict, ['category', 'data_node'], update_columns=None)
+    for d in data:
+        items.append(d)
+        if len(items) >= batch_size:
+            await db.bulk_upsert('staging.stg__dummy', items, conflict_columns=['category', 'subcategory'])
+            items = list()
+    if items:
+        await db.bulk_upsert('staging.stg__dummy', items, conflict_columns=['category', 'subcategory'])
     await db.close()
 
-asyncio.run(main())
+with open(".json/lc_pages.json") as f:
+    data = json.load(f)
+
+asyncio.run(main(100))
