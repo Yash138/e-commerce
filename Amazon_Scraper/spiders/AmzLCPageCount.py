@@ -1,5 +1,5 @@
 import scrapy
-from Amazon_Scraper.helpers.db_postgres_handler import PostgresDBHandler
+from Amazon_Scraper.helpers.postgres_handler import PostgresDBHandler
 from scrapy.utils.defer import deferred_from_coro
 
 class AmzLCPageCountSpider(scrapy.Spider):
