@@ -25,7 +25,7 @@ class AmzproductslcSpider(scrapy.Spider, DelayHandler):
             'scrapy.downloadermiddlewares.useragent.UserAgentMiddleware': None,
             'scrapy_user_agents.middlewares.RandomUserAgentMiddleware': 400,
         },
-        "DOWNLOAD_DELAY" : 15,
+        "DOWNLOAD_DELAY" : 8,
         "RANDOMIZE_DOWNLOAD_DELAY" : True,
         "CONCURRENT_REQUESTS" : 2,
         "CONCURRENT_REQUESTS_PER_DOMAIN" : 2,
@@ -35,7 +35,7 @@ class AmzproductslcSpider(scrapy.Spider, DelayHandler):
         "RETRY_DELAY" : 15,
     }
 
-    def __init__(self, postgres_handler, batch_size = 1, category = None, lowest_category = None, retry_count = 3, crawler=None, **kwargs):
+    def __init__(self, postgres_handler, batch_size = 1, category = None, lowest_category = None, retry_count = 3, logfile=None, crawler=None, **kwargs):
         """
         Initialize the spider with Postgres connection details and batch size.
 
@@ -56,6 +56,7 @@ class AmzproductslcSpider(scrapy.Spider, DelayHandler):
         self.update_category = list()
         self.processed_asins = set()  # Set to track processed ASINs
         self.is_retry_scheduler = False  # Track if we're in retry scheduler mode
+        self.logfile = logfile
         DelayHandler.__init__(
             self,
             initial_delay=crawler.settings.get('DOWNLOAD_DELAY'),  # Set initial delay
@@ -128,6 +129,7 @@ class AmzproductslcSpider(scrapy.Spider, DelayHandler):
             if urls_to_retry:
                 self.log(f"Retrying {len(urls_to_retry)} failed URLs", 20)
                 for failed_url_data in urls_to_retry:
+                    self.log(f"Retrying URL: {failed_url_data}", 20)
                     yield scrapy.Request(
                         url=f"https://www.amazon.in/s?i={failed_url_data['category']}&rh=n%3A{failed_url_data['lowest_category']}&s=popularity-rank&fs=true&page={failed_url_data['refreshed_pages_upto']}",
                         callback=self.parse,
@@ -182,22 +184,14 @@ class AmzproductslcSpider(scrapy.Spider, DelayHandler):
         self.log(f"Processing category: {category}, lowest_category: {lowest_category}", 20)
         
         # Get current page number from meta or default to 0
+        current_page = response.meta.get('page', 0) if response.meta.get('page', 0) != 0 else 1
+        product_count = 0 #response.meta.get('product_count', 0)
+        skipped_asins = 0
         if response.meta.get('initial_run', True) or int(response.meta['total_pages']) == 0:
-            self.total_pages = int(response.meta['total_pages']) or int(response.xpath('//span[contains(@class, "pagination-strip")]/ul/child::*[last()-1]//text()').get() or '1')
+            self.total_pages = int(response.xpath('//span[contains(@class, "pagination-strip")]/ul/child::*[last()-1]//text()').get() or '1')
         else:
             self.total_pages = int(response.meta['total_pages'])
-        current_page = response.meta.get('page', 0) if response.meta.get('page', 0) != 0 else 1
-        
-        for x in self.update_category:
-            if x["category"] == category and x["lowest_category"] == lowest_category:
-                x["refreshed_pages_upto"] = current_page
-                x["last_refresh_timestamp"] = dt.now()
-                break
-        else:
-            self.update_category.append(
-                {"category": category, "lowest_category": lowest_category, "total_pages": self.total_pages, "refreshed_pages_upto": current_page, "last_refresh_timestamp": dt.now()} 
-            )
-        product_count = 0
+        # self.total_pages = int(response.xpath('//span[contains(@class, "pagination-strip")]/ul/child::*[last()-1]//text()').get() or '1')
         # if refreshed_pages_upto <= current_page, then skip the pages already processed and start from the next page
         if current_page <= response.meta['refreshed_pages_upto'] and current_page != 0:
             self.log(f"Skipping already processed pages for category: {category}, lowest_category: {lowest_category}, current_page: {current_page}, already_refreshed_pages_upto: {response.meta['refreshed_pages_upto']}", 20)
@@ -208,6 +202,8 @@ class AmzproductslcSpider(scrapy.Spider, DelayHandler):
                 asin = product.xpath('@data-asin').get()
                 if asin in self.processed_asins:
                     self.log(f"Skipping already processed ASIN: {asin}", 20)
+                    skipped_asins += 1
+                    product_count += 1
                     continue  # Skip if ASIN is already processed
 
                 self.processed_asins.add(asin)  # Add ASIN to the set
@@ -232,9 +228,17 @@ class AmzproductslcSpider(scrapy.Spider, DelayHandler):
                     item['launch_date'] = None
                     item['brand_store_url'] = None
                     item['spider_name'] = self.name
-                    yield item
                     product_count += 1
-
+                    yield item
+            for x in self.update_category:
+                if x["category"] == category and x["lowest_category"] == lowest_category:
+                    x["refreshed_pages_upto"] = current_page
+                    x["last_refresh_timestamp"] = dt.now()
+                    break
+            else:
+                self.update_category.append(
+                    {"category": category, "lowest_category": lowest_category, "total_pages": self.total_pages, "refreshed_pages_upto": current_page, "last_refresh_timestamp": dt.now()} 
+                )
         # Check for the next page
         next_page = response.xpath('//*[contains(@class, "pagination-strip")]//*[contains(text(), "Next")]/@href').get()
         # first page is considered at depth_limit = 0
@@ -254,16 +258,26 @@ class AmzproductslcSpider(scrapy.Spider, DelayHandler):
             )
         else:
             self.log(f"Category: {category} | Lowest Category: {lowest_category} | Restricted to Depth: {self.settings['DEPTH_LIMIT']} | Current Page: {current_page} | Total Pages: {self.total_pages}", 20)
-            if product_count == 0: # this will happen when the LC is not having any products on the first page
-                current_page -= 1
+            flg_empty_page = False
+            if product_count == 0 and skipped_asins == 0: # this will happen when the LC is not having any products on the first page
+                self.log(f"No Products found for category: {category} | Lowest Category: {lowest_category} | Current Page: {current_page}", 20)
+                flg_empty_page = True
             # Update refreshed_pages_upto and last_refresh_timestamp when the last page is reached
             for x in self.update_category:
                 if x["category"] == category and x["lowest_category"] == lowest_category:
-                    x["refreshed_pages_upto"] = current_page
+                    if flg_empty_page:
+                        x["refreshed_pages_upto"] = max(0, current_page - 1)  # Ensure it doesn't go below 0
+                    else:
+                        x["refreshed_pages_upto"] = current_page
                     x["last_refresh_timestamp"] = dt.now(),
-                    x["products_per_page"] = product_count
+                    x["products_per_page"] = product_count,
+                    x["total_pages"] = self.total_pages if not flg_empty_page else self.total_pages - 1
                     break
             # update the category_controller table here for the completed category and lowest_category
+            for i,failed_url in enumerate(self.failed_urls):
+                if failed_url["category"] == category and failed_url["lowest_category"] == lowest_category:
+                    self.failed_urls.pop(i)
+                    break
 
     def spider_closed(self, spider):
         self.log(f"Category stats {self.update_category}", 20)
