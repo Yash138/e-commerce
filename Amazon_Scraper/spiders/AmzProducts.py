@@ -36,7 +36,7 @@ class AmzproductsSpider(scrapy.Spider, DelayHandler):
 
     handle_httpstatus_list = [404]
 
-    def __init__(self, postgres_handler, batch_size = 1, crawler=None, **kwargs):
+    def __init__(self, postgres_handler, batch_size = 1, logfile=None, crawler=None, **kwargs):
         """
         Initialize the spider with Postgres connection details and batch size.
 
@@ -48,9 +48,7 @@ class AmzproductsSpider(scrapy.Spider, DelayHandler):
         self.postgres_handler = postgres_handler
         self.batch_size = int(batch_size)
         self.failed_urls = list()
-        # log_file = f"{LOG_DIR}/{self.name}.log"  # Define log file path
-        # self.custom_logger = setup_logger(self.name, log_file)  # Initialize custom logger
-        # self.custom_logger.info("Logger initialized for AmzProducts spider")  # Log initialization message
+        self.logfile = logfile
         DelayHandler.__init__(
             self, 
             initial_delay=crawler.settings.get('DOWNLOAD_DELAY'), 
@@ -197,5 +195,6 @@ class AmzproductsSpider(scrapy.Spider, DelayHandler):
 
     def spider_closed(self, spider):
         if self.failed_urls:
+            self.log(f"Failed URLs ({len(self.failed_urls)}): {self.failed_urls}", 20)
             self.postgres_handler.bulk_upsert('staging.stg_amz__product_error_urls', self.failed_urls, ["asin"])
         self.postgres_handler.close()
