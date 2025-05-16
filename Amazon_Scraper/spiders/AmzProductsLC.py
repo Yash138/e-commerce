@@ -1,5 +1,5 @@
 import scrapy
-from Amazon_Scraper.helpers.db_postgres_handler import PostgresDBHandler
+from Amazon_Scraper.helpers.postgres_handler import PostgresDBHandler
 from Amazon_Scraper.items import AmazonProductItem
 from datetime import datetime as dt
 from Amazon_Scraper.helpers.delay_handler import DelayHandler

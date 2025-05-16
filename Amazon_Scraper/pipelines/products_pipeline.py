@@ -1,4 +1,4 @@
-from Amazon_Scraper.helpers.db_postgres_handler import PostgresDBHandler
+from Amazon_Scraper.helpers.postgres_handler import PostgresDBHandler
 from Amazon_Scraper.helpers.utils import extract_numeric_part, safe_strip, safe_split
 
 from datetime import datetime as dt

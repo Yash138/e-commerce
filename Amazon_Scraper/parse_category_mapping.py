@@ -2,7 +2,7 @@ import json
 import asyncio
 import sys
 from helpers.utils import extract_paths, extract_categories
-from helpers.db_postgres_handler import AsyncPostgresDBHandler 
+from helpers.postgres_handler_async import AsyncPostgresDBHandler 
 from settings import POSTGRES_HOST, POSTGRES_DATABASE, POSTGRES_USERNAME, POSTGRES_PASSWORD, POSTGRES_PORT
 
 if len(sys.argv) < 2:
