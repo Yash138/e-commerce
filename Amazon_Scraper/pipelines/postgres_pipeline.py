@@ -1,4 +1,5 @@
-from Amazon_Scraper.helpers.db_postgres_handler import PostgresDBHandler, AsyncPostgresDBHandler
+from Amazon_Scraper.helpers.postgres_handler import PostgresDBHandler
+from Amazon_Scraper.helpers.postgres_handler_async import AsyncPostgresDBHandler
 from twisted.internet import defer, reactor
 from typing import Dict, Any
 from Amazon_Scraper.helpers.utils import safe_strip, safe_replace, safe_split

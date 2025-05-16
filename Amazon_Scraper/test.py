@@ -1,6 +1,6 @@
 import asyncio
 import json
-from helpers.db_postgres_handler import AsyncPostgresDBHandler, PostgresDBHandler 
+from helpers.postgres_handler_async import AsyncPostgresDBHandler 
 from settings import POSTGRES_HOST, POSTGRES_DATABASE, POSTGRES_USERNAME, POSTGRES_PASSWORD, POSTGRES_PORT
 
 
