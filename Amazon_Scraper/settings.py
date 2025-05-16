@@ -1,4 +1,4 @@
-# Scrapy settings for Ecommerce_Scraper project
+# Scrapy settings for Amazon_Scraper project
 #
 # For simplicity, this file contains only settings considered important or
 # commonly used. You can find more settings consulting the documentation:
@@ -7,14 +7,13 @@
 #     https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
 #     https://docs.scrapy.org/en/latest/topics/spider-middleware.html
 
-BOT_NAME = "Ecommerce_Scraper"
-
-SPIDER_MODULES = ["Ecommerce_Scraper.spiders"]
-NEWSPIDER_MODULE = "Ecommerce_Scraper.spiders"
+BOT_NAME = "Web Scraper"
+SPIDER_MODULES = ["Amazon_Scraper.spiders"]
+NEWSPIDER_MODULE = "Amazon_Scraper.spiders"
 
 
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
-#USER_AGENT = "Ecommerce_Scraper (+http://www.yourdomain.com)"
+#USER_AGENT = "Amazon_Scraper (+http://www.yourdomain.com)"
 
 # Obey robots.txt rules
 ROBOTSTXT_OBEY = True
@@ -25,14 +24,13 @@ ROBOTSTXT_OBEY = True
 # Configure a delay for requests for the same website (default: 0)
 # See https://docs.scrapy.org/en/latest/topics/settings.html#download-delay
 # See also autothrottle settings and docs
-# DOWNLOAD_DELAY = 0.5   # Delay of 3 seconds between requests
-# RANDOMIZE_DOWNLOAD_DELAY = True  # Add random delays to mimic human behavior
+#DOWNLOAD_DELAY = 3
 # The download delay setting will honor only one of:
 #CONCURRENT_REQUESTS_PER_DOMAIN = 16
 #CONCURRENT_REQUESTS_PER_IP = 16
 
 # Disable cookies (enabled by default)
-#COOKIES_ENABLED = False
+COOKIES_ENABLED = False
 
 # Disable Telnet Console (enabled by default)
 #TELNETCONSOLE_ENABLED = False
@@ -46,42 +44,34 @@ ROBOTSTXT_OBEY = True
 # Enable or disable spider middlewares
 # See https://docs.scrapy.org/en/latest/topics/spider-middleware.html
 #SPIDER_MIDDLEWARES = {
-#    "Ecommerce_Scraper.middlewares.EcommerceScraperSpiderMiddleware": 543,
+#    "Amazon_Scraper.middlewares.AmazonScraperSpiderMiddleware": 543,
 #}
 
 # Enable or disable downloader middlewares
 # See https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
-# DOWNLOADER_MIDDLEWARES = {
-#    # "Ecommerce_Scraper.middlewares.EcommerceScraperDownloaderMiddleware": 543,
-#     'Ecommerce_Scraper.middlewares.ExponentialBackoffRetryMiddleware': 550,
-# }
-
 DOWNLOADER_MIDDLEWARES = {
-    'scrapy.downloadermiddlewares.useragent.UserAgentMiddleware': 400,
-#     'scrapy_user_agents.middlewares.RandomUserAgentMiddleware': 400,
+    # 'scrapy.downloadermiddlewares.useragent.UserAgentMiddleware': 400,
+    'scrapy_user_agents.middlewares.RandomUserAgentMiddleware': 400,
 }
-
 
 RETRY_ENABLED = True
 RETRY_TIMES = 3  # Number of retries for a failed request
-RETRY_DELAY = 0.25  # Initial delay of 2 seconds
+RETRY_DELAY = 2  # Initial delay of 2 seconds
 RETRY_HTTP_CODES = [500, 502, 503, 504, 408]  # Retry on server-side issues
 
 # Enable or disable extensions
 # See https://docs.scrapy.org/en/latest/topics/extensions.html
-#EXTENSIONS = {
-#    "scrapy.extensions.telnet.TelnetConsole": None,
-#}
+EXTENSIONS = {
+    "scrapy.extensions.telnet.TelnetConsole": None,
+    "Amazon_Scraper.extensions.custom_logger.SpiderLoggerExtension": 500,
+}
 
 # Configure item pipelines
 # See https://docs.scrapy.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
-   # "Ecommerce_Scraper.pipelines.AmazonBSStagingMongoPipeline": 300,
-   # "Ecommerce_Scraper.pipelines.AmazonProductScraperMongoPipeline": 300,
-   
-   "Ecommerce_Scraper.pipelines.AmazonBSStagingPipeline": 100,
-   "Ecommerce_Scraper.pipelines.AmazonProductStagePipeline": 200,
-   "Ecommerce_Scraper.pipelines.AmazonProductTransformPipeline": 300,
+#    "Amazon_Scraper.pipelines.postgres_pipeline.AmzProductRankingStgAsyncPipeline": 300,
+    "Amazon_Scraper.pipelines.postgres_pipeline.AmzProductRankingStgSyncPipeline": 300,
+    "Amazon_Scraper.pipelines.products_pipeline.AmzProductsPipeline": 300,
 }
 
 # Enable and configure the AutoThrottle extension (disabled by default)
@@ -90,10 +80,10 @@ AUTOTHROTTLE_ENABLED = True
 # The initial download delay
 AUTOTHROTTLE_START_DELAY = 5
 # The maximum download delay to be set in case of high latencies
-AUTOTHROTTLE_MAX_DELAY = 60
+AUTOTHROTTLE_MAX_DELAY = 30
 # The average number of requests Scrapy should be sending in parallel to
 # each remote server
-#AUTOTHROTTLE_TARGET_CONCURRENCY = 1.0
+AUTOTHROTTLE_TARGET_CONCURRENCY = 1.5
 # Enable showing throttling stats for every response received:
 #AUTOTHROTTLE_DEBUG = False
 
@@ -109,10 +99,6 @@ AUTOTHROTTLE_MAX_DELAY = 60
 TWISTED_REACTOR = "twisted.internet.asyncioreactor.AsyncioSelectorReactor"
 FEED_EXPORT_ENCODING = "utf-8"
 
-# MongoDB Connection Details
-MONGO_URI = "mongodb://localhost:27017"
-MONGO_DATABASE = "ecommerce"
-
 # PostgreSQL DB Connection Details
 POSTGRES_HOST = 'localhost'
 POSTGRES_DATABASE = 'ecommerce'
@@ -120,5 +106,41 @@ POSTGRES_USERNAME = 'postgres'
 POSTGRES_PASSWORD = 'hsV6.sfi2'
 POSTGRES_PORT = '5432'
 
-BEST_SELLER_LOAD_TYPE = 'INCREMENTAL'  # possible values: FULLREFRESH | INCREMENTAL
-PRODUCT_LOAD_TYPE = 'INCREMENTAL'  # possible values: FULLREFRESH | INCREMENTAL
+CATEGORIES = {
+        "bestsellers": "bestsellers",
+        "movers_and_shakers": "movers-and-shakers",
+        "most_wished_for": "most-wished-for",
+        "hot_new_releases": "new-releases"
+    }
+EXCLUDE_CATEGORIES = [
+    'Amazon Launchpad','Amazon Renewed','Apps & Games', 'Books', 'Clothing & Accessories', 
+    'Gift Cards','Kindle Store','Movies & TV Shows','Music','Musical Instruments', 'Software', 
+    'Toys & Games','Video Games','Watches']
+
+EXCLUDE_CATEGORIES_IDS = [
+    'boost','amazon-renewed','mobile-apps', 'books', 'apparel', 
+    'gift-cards','digital-text','dvd','music','musical-instruments', 'software', 
+    'toys','videogames','watches']
+
+# Logger Settings
+import os
+
+# Directory for log files
+LOG_DIR = os.path.join(os.getcwd(), "logs")
+
+# Maximum size of a log file in bytes (e.g., 10 MB)
+LOG_ROTATING_MAX_BYTES = 5 * 1024 * 1024
+
+# Number of backup log files to keep
+LOG_ROTATING_BACKUP_COUNT = 5
+
+# Date and time formats
+DATE_FORMAT = "%Y-%m-%d"
+DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
+LOG_FORMAT = '%(asctime)s [%(levelname)s] [%(name)s:%(lineno)d]: %(message)s'
+
+# Directory for temporary files
+TEMP_DIR = os.path.join(os.getcwd(), "temp")
+
+# Path for error logs
+ERROR_LOG_FILE = os.path.join(LOG_DIR, "error.log")
