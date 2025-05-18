@@ -29,7 +29,7 @@ class SpiderLoggerExtension:
     def spider_opened(self, spider):
         if not os.path.exists(self.log_dir):
             os.makedirs(self.log_dir)
-        log_file = getattr(spider, 'logfile', f"{spider.name}.log")
+        log_file = getattr(spider, 'logfile', f"{self.log_dir}/{spider.name}.log")
         self.handler = RotatingFileHandler(
             log_file, 
             maxBytes=self.max_bytes, 
