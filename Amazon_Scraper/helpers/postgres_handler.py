@@ -9,26 +9,30 @@ class PostgresDBHandler:
         self.user = user
         self.password = password
         self.port = port
-        self.connection = None
+        self.connection = None # Ensure connection is initialized to None
 
     def connect(self):
         """Establish a connection to the PostgreSQL database."""
         try:
-            self.connection = psycopg2.connect(
-                host=self.host,
-                database=self.database,
-                user=self.user,
-                password=self.password,
-                port=self.port
-            )
+            # Only connect if there's no existing connection or it's closed
+            if self.connection is None or self.connection.closed != 0: # psycopg2.connection.closed is 0 for open, 1 for closed
+                self.connection = psycopg2.connect(
+                    host=self.host,
+                    database=self.database,
+                    user=self.user,
+                    password=self.password,
+                    port=self.port
+                )
+                return self.connection
         except psycopg2.Error as e:
             print(f"Error connecting to PostgreSQL database: {e}")
-            raise
+            raise # Re-raise the exception after printing
 
     def close(self):
         """Close the database connection."""
-        if self.connection:
+        if self.connection and self.connection.closed == 0: # Only close if connection exists and is open
             self.connection.close()
+            self.connection = None # Set to None after closing
 
     def insert(self, table, data):
         """
@@ -227,4 +231,13 @@ class PostgresDBHandler:
             self.connection.rollback()
             print(f"Error deleting from {table}: {e}")
             raise
+    
+    # --- ADD THESE TWO METHODS TO MAKE IT A CONTEXT MANAGER ---
+    def __enter__(self):
+        self.connect()
+        return self
 
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+        return False
+    
