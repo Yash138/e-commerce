@@ -1,11 +1,11 @@
-scrapy crawl AmzCategoryUrls -a list_type=bestsellers --logfile=./logs/amz_category_urls_bestsellers.log
-scrapy crawl AmzCategoryUrls -a list_type=movers_and_shakers --logfile=./logs/amz_category_urls_movers_and_shakers.log
-scrapy crawl AmzCategoryUrls -a list_type=hot_new_releases --logfile=./logs/amz_category_urls_hot_new_releases.log
-scrapy crawl AmzCategoryUrls -a list_type=most_wished_for --logfile=./logs/amz_category_urls_most_wished_for.log
-scrapy crawl AmzCategory -a list_type=bestsellers -a batch_size=500 --logfile=./logs/amz_category_bestsellers.log
-scrapy crawl AmzCategory -a list_type=movers_and_shakers -a batch_size=500 --logfile=./logs/amz_category_movers_and_shakers.log
-scrapy crawl AmzCategory -a list_type=hot_new_releases -a batch_size=500 --logfile=./logs/amz_category_hot_new_releases.log
-scrapy crawl AmzCategory -a list_type=most_wished_for -a batch_size=500 --logfile=./logs/amz_category_most_wished_for.log
+scrapy crawl AmzCategoryUrls -a list_type=bestsellers -a logfile=./logs/amz_category_urls_bestsellers.log
+scrapy crawl AmzCategoryUrls -a list_type=movers_and_shakers -a logfile=./logs/amz_category_urls_movers_and_shakers.log
+scrapy crawl AmzCategoryUrls -a list_type=hot_new_releases -a logfile=./logs/amz_category_urls_hot_new_releases.log
+scrapy crawl AmzCategoryUrls -a list_type=most_wished_for -a logfile=./logs/amz_category_urls_most_wished_for.log
+scrapy crawl AmzCategory -a list_type=bestsellers -a batch_size=500 -a logfile=./logs/amz_category_bestsellers.log
+scrapy crawl AmzCategory -a list_type=movers_and_shakers -a batch_size=500 -a logfile=./logs/amz_category_movers_and_shakers.log
+scrapy crawl AmzCategory -a list_type=hot_new_releases -a batch_size=500 -a logfile=./logs/amz_category_hot_new_releases.log
+scrapy crawl AmzCategory -a list_type=most_wished_for -a batch_size=500 -a logfile=./logs/amz_category_most_wished_for.log
 
 scrapy crawl AmzProducts -a batch_size=100 -a logfile=./logs/amz_product.log 
 

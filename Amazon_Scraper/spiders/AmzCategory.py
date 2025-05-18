@@ -16,9 +16,10 @@ class AmzcategorySpider(scrapy.Spider):
         }
     }
 
-    def __init__(self, list_type="bestsellers", batch_size=1, *args, **kwargs):
+    def __init__(self, list_type="bestsellers", batch_size=1, logfile=None, *args, **kwargs):
         self.list_type = list_type  # Accept list_type parameter
         self.batch_size = int(batch_size)
+        self.logfile = logfile
         self.visited_url = set()
         
     @classmethod
