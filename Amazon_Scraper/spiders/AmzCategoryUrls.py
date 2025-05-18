@@ -11,8 +11,9 @@ class AmzcategoryurlsSpider(scrapy.Spider):
         "ITEM_PIPELINES":{}
     }
     
-    def __init__(self, list_type="bestsellers", *args, **kwargs):
+    def __init__(self, list_type="bestsellers", logfile=None, *args, **kwargs):
         self.list_type = list_type  # Accept list_type parameter
+        self.logfile = logfile
         self.visited_url = set()
         
     @classmethod
