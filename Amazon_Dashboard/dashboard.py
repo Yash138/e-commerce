@@ -114,26 +114,15 @@ GLOBAL_AVG_RATING_QUERY = """
 def load_data(query):
     # It's good practice to ensure the handler is connected before use inside a cached function
     # or pass a connected handler
-    # with PostgresDBHandler(
-    #     POSTGRES_HOST,
-    #     POSTGRES_DATABASE,
-    #     POSTGRES_USERNAME,
-    #     POSTGRES_PASSWORD,
-    #     POSTGRES_PORT
-    # ) as handler: # Using 'with' ensures proper connection closing
-    #     with st.spinner("Loading Data..."):
-    #         df = pd.DataFrame(handler.read(query=query))
-    postgres_handler =  PostgresDBHandler(
-            POSTGRES_HOST,
-            POSTGRES_DATABASE,
-            POSTGRES_USERNAME,
-            POSTGRES_PASSWORD,
-            POSTGRES_PORT
-        )
-    postgres_handler.connect()
-    with st.spinner("Loading Data..."):
-        df = pd.DataFrame(postgres_handler.read(query=query))
-    postgres_handler.close()
+    with PostgresDBHandler(
+        POSTGRES_HOST,
+        POSTGRES_DATABASE,
+        POSTGRES_USERNAME,
+        POSTGRES_PASSWORD,
+        POSTGRES_PORT
+    ) as handler: # Using 'with' ensures proper connection closing
+        with st.spinner("Loading Data..."):
+            df = pd.DataFrame(handler.read(query=query))
     return df
 
 st.set_page_config(layout="wide", page_title="Amazon Market Insights")
