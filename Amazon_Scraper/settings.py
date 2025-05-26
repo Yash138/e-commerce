@@ -30,28 +30,69 @@ ROBOTSTXT_OBEY = True
 #CONCURRENT_REQUESTS_PER_IP = 16
 
 # Disable cookies (enabled by default)
-COOKIES_ENABLED = False
+COOKIES_ENABLED = True # Enable cookies to maintain session state
+REFERER_ENABLED = True  # Enable RefererMiddleware to set the referer header
 
 # Disable Telnet Console (enabled by default)
 #TELNETCONSOLE_ENABLED = False
 
 # Override the default request headers:
-#DEFAULT_REQUEST_HEADERS = {
-#    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-#    "Accept-Language": "en",
-#}
+# DEFAULT_REQUEST_HEADERS = {
+#     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+#     'Accept-Language': 'en-US,en;q=0.5',
+#     'Accept-Encoding': 'gzip, deflate, br',
+#     'Connection': 'keep-alive',
+#     'Upgrade-Insecure-Requests': '1',
+#     # Do NOT include 'User-Agent' here as it is already getting set by the RandomUserAgentMiddleware
+#     # 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'
+# }
 
 # Enable or disable spider middlewares
 # See https://docs.scrapy.org/en/latest/topics/spider-middleware.html
-#SPIDER_MIDDLEWARES = {
-#    "Amazon_Scraper.middlewares.AmazonScraperSpiderMiddleware": 543,
-#}
+SPIDER_MIDDLEWARES = {
+    # Scrapy's built-in RefererMiddleware.
+    # It dynamically sets the Referer header based on the previous request,
+    # mimicking natural Browsing.
+    'scrapy.spidermiddlewares.referer.RefererMiddleware': 800, 
+}
 
 # Enable or disable downloader middlewares
 # See https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
+PROXY_USER = 'customer-yash138_f4MFO'
+PROXY_PASSWORD = 'N_xhAfpe4dS_D4w'
+PROXY_URL = 'in-pr.oxylabs.io'
+# ROTATING PROXY PORT
+PROXY_PORT = '20000'
+# STICKY PROXY PORTS
+PROXY_PORTS = [
+    "20001",
+    "20002",
+    "20003",
+    "20004",
+    "20005",
+    "20006",
+    "20007",
+    "20008",
+    # Add more as needed
+]
 DOWNLOADER_MIDDLEWARES = {
-    # 'scrapy.downloadermiddlewares.useragent.UserAgentMiddleware': 400,
-    'scrapy_user_agents.middlewares.RandomUserAgentMiddleware': 400,
+    # Proxy Middlewares (keep your existing setup)
+    # 'Amazon_Scraper.middlewares.ProxyMiddleware': None,
+    # 'Amazon_Scraper.middlewares.RandomizedProxyMiddleware': 100,
+    # 'scrapy.downloadermiddlewares.httpproxy.HttpProxyMiddleware': 110, # Scrapy's proxy middleware
+
+    # Disable Scrapy's default UserAgentMiddleware
+    'scrapy.downloadermiddlewares.useragent.UserAgentMiddleware': None,
+    'scrapy_user_agents.middlewares.RandomUserAgentMiddleware': 400, # Runs after proxies
+
+    # Disable Scrapy's default DefaultHeadersMiddleware if you rely entirely on your new middleware
+    'scrapy.downloadermiddlewares.defaultheaders.DefaultHeadersMiddleware': None,
+    # Placing it after the User-Agent middleware so it doesn't overwrite the User-Agent.
+    'Amazon_Scraper.middlewares.HeaderRotationMiddleware': 500,
+
+    # Scrapy's built-in CookiesMiddleware. Essential for session management.
+    # it's enabled and runs after headers are set.
+    'scrapy.downloadermiddlewares.cookies.CookiesMiddleware': 700,
 }
 
 RETRY_ENABLED = True

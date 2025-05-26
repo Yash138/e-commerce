@@ -101,3 +101,88 @@ class AmazonScraperDownloaderMiddleware:
 
     def spider_opened(self, spider):
         spider.logger.info("Spider opened: %s" % spider.name)
+
+import random
+
+class ProxyMiddleware:
+    @classmethod
+    def from_crawler(cls, crawler):
+        return cls(crawler.settings)
+
+    def __init__(self, settings):
+        self.username = settings.get('PROXY_USER')
+        self.password = settings.get('PROXY_PASSWORD')
+        self.url = settings.get('PROXY_URL')
+        self.ports = settings.get('PROXY_PORTS')
+
+    def process_request(self, request, spider):
+        host = f'https://{self.username}:{self.password}@{self.url}:{random.choice(self.ports)}'
+        request.meta['proxy'] = host
+
+
+class RandomizedProxyMiddleware:
+    @classmethod
+    def from_crawler(cls, crawler):
+        return cls(crawler.settings)
+
+    def __init__(self, settings):
+        # full list of your sticky sessions
+        self.username = settings.get('PROXY_USER')
+        self.password = settings.get('PROXY_PASSWORD')
+        self.url = settings.get('PROXY_URL')
+        self.ports = settings.get('PROXY_PORTS')
+        self.sessions = [f'https://{self.username}:{self.password}@{self.url}:{port}' for port in self.ports]
+
+        # pool will hold the next “cycle” of sessions in random order
+        self._reset_pool()
+
+    def _reset_pool(self):
+        # copy & shuffle to get a new random order each cycle
+        self.pool = self.sessions.copy()
+        random.shuffle(self.pool)
+
+    def process_request(self, request, spider):
+        # refill & reshuffle when we’ve used up the current pool
+        if not self.pool:
+            self._reset_pool()
+
+        # pop off one session endpoint
+        proxy = self.pool.pop()
+
+        # optionally, with a small probability, pick a completely random one:
+        # if random.random() < 0.1:
+        #     proxy = random.choice(self.sessions)
+
+        request.meta['proxy'] = proxy
+
+
+class HeaderRotationMiddleware:
+    def __init__(self, header_templates):
+        self.header_templates = header_templates
+
+    @classmethod
+    def from_crawler(cls, crawler):
+        try:
+            # Adjust the import path based on your project structure
+            from Amazon_Scraper.header_templates import HEADER_TEMPLATES
+        except ImportError:
+            raise ImportError(
+                "Could not import HEADER_TEMPLATES. "
+                "Make sure 'Amazon_Scraper/header_templates.py' exists "
+                "and contains the HEADER_TEMPLATES list."
+            )
+        return cls(header_templates=HEADER_TEMPLATES)
+
+    def process_request(self, request, spider):
+        # Pick a random header template
+        selected_headers = random.choice(self.header_templates)
+
+        # Apply each header from the template to the request
+        # Ensure User-Agent is NOT set here (handled by scrapy_user_agents)
+        # And Cookies are handled by CookiesMiddleware.
+        for header_name, header_value in selected_headers.items():
+            if header_name.lower() not in ['user-agent', 'cookie']:
+                # Using setdefault to only add if the header isn't already present.
+                # If you want to force these headers to overwrite any existing ones,
+                # use: request.headers[header_name] = header_value
+                request.headers.setdefault(header_name, header_value)
