@@ -43,7 +43,7 @@ class AmzproductsSpider(scrapy.Spider, DelayHandler):
 
     handle_httpstatus_list = [404]
 
-    def __init__(self, postgres_handler, batch_size = 1, logfile=None, crawler=None, **kwargs):
+    def __init__(self, postgres_handler, batch_size = 1, logfile=None, category=None, crawler=None, **kwargs):
         """
         Initialize the spider with Postgres connection details and batch size.
 
@@ -56,6 +56,7 @@ class AmzproductsSpider(scrapy.Spider, DelayHandler):
         self.batch_size = int(batch_size)
         self.failed_urls = list()
         self.logfile = logfile
+        self.category = category
         DelayHandler.__init__(
             self, 
             initial_delay=crawler.settings.get('DOWNLOAD_DELAY'), 
