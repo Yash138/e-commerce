@@ -75,6 +75,9 @@ PROXY_PORTS = [
     "20008",
     # Add more as needed
 ]
+
+from Amazon_Scraper.header_templates import REAL_BROWSER_HEADERS_GROUP_1, REAL_BROWSER_HEADERS_GROUP_2
+
 DOWNLOADER_MIDDLEWARES = {
     # Proxy Middlewares (keep your existing setup)
     # 'Amazon_Scraper.middlewares.ProxyMiddleware': None,

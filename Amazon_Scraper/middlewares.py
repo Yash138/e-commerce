@@ -4,7 +4,7 @@
 # https://docs.scrapy.org/en/latest/topics/spider-middleware.html
 
 from scrapy import signals
-
+from datetime import datetime
 # useful for handling different item types with a single interface
 from itemadapter import is_item, ItemAdapter
 
@@ -157,26 +157,22 @@ class RandomizedProxyMiddleware:
 
 
 class HeaderRotationMiddleware:
-    def __init__(self, header_templates):
-        self.header_templates = header_templates
+    def __init__(self, group1, group2):
+        self.group1 = group1
+        self.group2 = group2
 
     @classmethod
     def from_crawler(cls, crawler):
-        try:
-            # Adjust the import path based on your project structure
-            from Amazon_Scraper.header_templates import HEADER_TEMPLATES
-        except ImportError:
-            raise ImportError(
-                "Could not import HEADER_TEMPLATES. "
-                "Make sure 'Amazon_Scraper/header_templates.py' exists "
-                "and contains the HEADER_TEMPLATES list."
-            )
-        return cls(header_templates=HEADER_TEMPLATES)
+        group1 = crawler.settings.get('REAL_BROWSER_HEADERS_GROUP_1')
+        group2 = crawler.settings.get('REAL_BROWSER_HEADERS_GROUP_2')
+        return cls(group1, group2)
 
     def process_request(self, request, spider):
         # Pick a random header template
-        selected_headers = random.choice(self.header_templates)
-
+        # selected_headers = random.choice(self.header_templates)
+        day = datetime.now().weekday()  # Monday=0, Sunday=6
+        headers = random.choice(self.group1 if day % 2 == 0 else self.group2)
+        selected_headers = headers.copy()
         # Apply each header from the template to the request
         # Ensure User-Agent is NOT set here (handled by scrapy_user_agents)
         # And Cookies are handled by CookiesMiddleware.
@@ -186,3 +182,9 @@ class HeaderRotationMiddleware:
                 # If you want to force these headers to overwrite any existing ones,
                 # use: request.headers[header_name] = header_value
                 request.headers.setdefault(header_name, header_value)
+        # Log a summary of the applied headers
+        # applied = {
+        #     k.decode(): b", ".join(v).decode() if isinstance(v, list) else v.decode()
+        #     for k, v in request.headers.items()
+        # }
+        # spider.log(f"[HeaderMiddleware] Applied headers: {applied}")
