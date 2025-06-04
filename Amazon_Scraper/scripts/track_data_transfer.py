@@ -32,8 +32,12 @@ for file in files:
     response_bytes = 0
     request_bytes = 0
     item_count = 0
-    with open(file, 'r') as f:
-        lines = f.readlines()
+    with open(file, 'r', encoding='utf-8') as f:
+        try:
+            lines = f.readlines()
+        except Exception as e:
+            print(f"Error reading {file}: {e}")
+            continue
         for line in lines:
             if 'downloader/response_bytes' in line:
                 run_count += 1

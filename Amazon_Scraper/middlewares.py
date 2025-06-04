@@ -4,7 +4,7 @@
 # https://docs.scrapy.org/en/latest/topics/spider-middleware.html
 
 from scrapy import signals
-
+from datetime import datetime
 # useful for handling different item types with a single interface
 from itemadapter import is_item, ItemAdapter
 
@@ -101,3 +101,91 @@ class AmazonScraperDownloaderMiddleware:
 
     def spider_opened(self, spider):
         spider.logger.info("Spider opened: %s" % spider.name)
+
+import random
+
+class ProxyMiddleware:
+    @classmethod
+    def from_crawler(cls, crawler):
+        return cls(crawler.settings)
+
+    def __init__(self, settings):
+        self.username = settings.get('PROXY_USER')
+        self.password = settings.get('PROXY_PASSWORD')
+        self.url = settings.get('PROXY_URL')
+        self.ports = settings.get('PROXY_PORTS')
+
+    def process_request(self, request, spider):
+        host = f'https://{self.username}:{self.password}@{self.url}:{random.choice(self.ports)}'
+        request.meta['proxy'] = host
+
+
+class RandomizedProxyMiddleware:
+    @classmethod
+    def from_crawler(cls, crawler):
+        return cls(crawler.settings)
+
+    def __init__(self, settings):
+        # full list of your sticky sessions
+        self.username = settings.get('PROXY_USER')
+        self.password = settings.get('PROXY_PASSWORD')
+        self.url = settings.get('PROXY_URL')
+        self.ports = settings.get('PROXY_PORTS')
+        self.sessions = [f'https://{self.username}:{self.password}@{self.url}:{port}' for port in self.ports]
+
+        # pool will hold the next “cycle” of sessions in random order
+        self._reset_pool()
+
+    def _reset_pool(self):
+        # copy & shuffle to get a new random order each cycle
+        self.pool = self.sessions.copy()
+        random.shuffle(self.pool)
+
+    def process_request(self, request, spider):
+        # refill & reshuffle when we’ve used up the current pool
+        if not self.pool:
+            self._reset_pool()
+
+        # pop off one session endpoint
+        proxy = self.pool.pop()
+
+        # optionally, with a small probability, pick a completely random one:
+        # if random.random() < 0.1:
+        #     proxy = random.choice(self.sessions)
+
+        request.meta['proxy'] = proxy
+
+
+class HeaderRotationMiddleware:
+    def __init__(self, group1, group2):
+        self.group1 = group1
+        self.group2 = group2
+
+    @classmethod
+    def from_crawler(cls, crawler):
+        group1 = crawler.settings.get('REAL_BROWSER_HEADERS_GROUP_1')
+        group2 = crawler.settings.get('REAL_BROWSER_HEADERS_GROUP_2')
+        return cls(group1, group2)
+
+    def process_request(self, request, spider):
+        # Pick a random header template
+        day = datetime.now().weekday()  # Monday=0, Sunday=6
+        headers = random.choice(self.group1 if day % 2 == 0 else self.group2)
+        # headers = random.choice(self.group1 + self.group2)
+        
+        selected_headers = headers.copy()
+        # Apply each header from the template to the request
+        # Ensure User-Agent is NOT set here (handled by scrapy_user_agents)
+        # And Cookies are handled by CookiesMiddleware.
+        for header_name, header_value in selected_headers.items():
+            if header_name.lower() not in ['user-agent', 'cookie']:
+                # Using setdefault to only add if the header isn't already present.
+                # If you want to force these headers to overwrite any existing ones,
+                # use: request.headers[header_name] = header_value
+                request.headers.setdefault(header_name, header_value)
+        # Log a summary of the applied headers
+        # applied = {
+        #     k.decode(): b", ".join(v).decode() if isinstance(v, list) else v.decode()
+        #     for k, v in request.headers.items()
+        # }
+        # spider.log(f"[HeaderMiddleware] Applied headers: {applied}")

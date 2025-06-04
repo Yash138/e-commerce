@@ -13,6 +13,10 @@ class AmzcategorySpider(scrapy.Spider):
     custom_settings = {
         'ITEM_PIPELINES': {
             'Amazon_Scraper.pipelines.postgres_pipeline.AmzProductRankingStgSyncPipeline': 300,
+        },
+        "DOWNLOADER_MIDDLEWARES" : {
+            'scrapy.downloadermiddlewares.useragent.UserAgentMiddleware': None,
+            'scrapy_user_agents.middlewares.RandomUserAgentMiddleware': 400,
         }
     }
 
