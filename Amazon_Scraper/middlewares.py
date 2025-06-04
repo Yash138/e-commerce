@@ -169,9 +169,10 @@ class HeaderRotationMiddleware:
 
     def process_request(self, request, spider):
         # Pick a random header template
-        # selected_headers = random.choice(self.header_templates)
         day = datetime.now().weekday()  # Monday=0, Sunday=6
         headers = random.choice(self.group1 if day % 2 == 0 else self.group2)
+        # headers = random.choice(self.group1 + self.group2)
+        
         selected_headers = headers.copy()
         # Apply each header from the template to the request
         # Ensure User-Agent is NOT set here (handled by scrapy_user_agents)
