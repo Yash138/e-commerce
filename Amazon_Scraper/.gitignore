@@ -16,4 +16,4 @@ __pycache__
 # jupyter
 .ipynb_checkpoints
 
-fixes/category_stats.py
+fixes/*
