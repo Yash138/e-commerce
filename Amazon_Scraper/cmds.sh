@@ -7,7 +7,7 @@ scrapy crawl AmzCategory -a list_type=movers_and_shakers -a batch_size=500 -a lo
 scrapy crawl AmzCategory -a list_type=hot_new_releases -a batch_size=500 -a logfile=./logs/amz_category_hot_new_releases.log
 scrapy crawl AmzCategory -a list_type=most_wished_for -a batch_size=500 -a logfile=./logs/amz_category_most_wished_for.log
 
-scrapy crawl AmzProducts -a batch_size=100 -a logfile=./logs/amz_product.log 
+scrapy crawl AmzProducts -a batch_size=100 -a logfile=./logs/amz_product_baby.log -a category=baby
 
 scrapy crawl AmzProductsLC -a category=jewelry -a batch_size=100 -s DEPTH_LIMIT=10 -a logfile=./logs/amzProductsLC_jewelry.log
 # -o ./.json/lc_output.json

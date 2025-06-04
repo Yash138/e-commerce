@@ -17,26 +17,33 @@ class AmzproductsSpider(scrapy.Spider, DelayHandler):
     initial_delay = 2
     delay = initial_delay
     none_response_timestamps = []
-    time_window = 60  # 1 minute in seconds
+    time_window = 60  # in seconds
     
     custom_settings = {
         "ITEM_PIPELINES" : {
             "Amazon_Scraper.pipelines.products_pipeline.AmzProductsPipeline": 300,
         },
         "DOWNLOADER_MIDDLEWARES" : {
+            # 'Amazon_Scraper.middlewares.ProxyMiddleware': None,
+            # 'Amazon_Scraper.middlewares.RandomizedProxyMiddleware': 100,
+            # 'scrapy.downloadermiddlewares.httpproxy.HttpProxyMiddleware': 110, # Scrapy's proxy middleware
             'scrapy.downloadermiddlewares.useragent.UserAgentMiddleware': None,
             'scrapy_user_agents.middlewares.RandomUserAgentMiddleware': 400,
+            'scrapy.downloadermiddlewares.defaultheaders.DefaultHeadersMiddleware': None,
+            'Amazon_Scraper.middlewares.HeaderRotationMiddleware': 500,
+            'scrapy.downloadermiddlewares.cookies.CookiesMiddleware': 700,
         },
         "AUTOTHROTTLE_ENABLED" : True,
         "RANDOMIZE_DOWNLOAD_DELAY" : True,
-        "CONCURRENT_REQUESTS" : 4,
-        "CONCURRENT_REQUESTS_PER_DOMAIN" : 4,
+        "CONCURRENT_REQUESTS" : 32,
+        "CONCURRENT_REQUESTS_PER_DOMAIN" : 32,
+        "CONCURRENT_REQUESTS_PER_IP": 4,
         "DOWNLOAD_DELAY" : delay,
     }
 
     handle_httpstatus_list = [404]
 
-    def __init__(self, postgres_handler, batch_size = 1, logfile=None, crawler=None, **kwargs):
+    def __init__(self, postgres_handler, batch_size = 1, logfile=None, category=None, crawler=None, **kwargs):
         """
         Initialize the spider with Postgres connection details and batch size.
 
@@ -49,6 +56,7 @@ class AmzproductsSpider(scrapy.Spider, DelayHandler):
         self.batch_size = int(batch_size)
         self.failed_urls = list()
         self.logfile = logfile
+        self.category = category
         DelayHandler.__init__(
             self, 
             initial_delay=crawler.settings.get('DOWNLOAD_DELAY'), 
@@ -146,10 +154,14 @@ class AmzproductsSpider(scrapy.Spider, DelayHandler):
         ).get() or ''
         item['product_name'] = response.xpath('//*[@id="productTitle"]/text()').get()
         item['seller_id'] = response.xpath(
-                '//div[contains(@tabular-attribute-name, "Sold by")]//a/@href |'
+                '//*[contains(@tabular-attribute-name, "Sold by")]//a/@href | '
+                '//*[contains(@offer-display-feature-name, "merchant-info")]//a/@href | '
                 '//td[@class="alm-mod-sfsb-column"]/span/a/@href'
             ).get() or ''
-        item['seller_name'] = response.xpath('//div[contains(@tabular-attribute-name, "Sold by")]//a/text()').get()
+        item['seller_name'] = response.xpath(
+            '//*[contains(@tabular-attribute-name, "Sold by")]//a/text() | '
+            '//*[contains(@offer-display-feature-name, "merchant-info")]//a/text()'
+        ).get()
         item['brand_name'] = response.xpath(
                 '//*[@id="bylineInfo_feature_div"]/div[1]/a/text() | '
                 '//*[@id="bylineInfo_feature_div"]/div[1]/span/a/text()'
@@ -186,6 +198,7 @@ class AmzproductsSpider(scrapy.Spider, DelayHandler):
         item['spider_name'] = self.name
         # handle empty response and increase delay
         if item['product_name'] is None:
+            self.log(f"Empty response for ASIN: {item['asin']}", 30)
             if self.handle_none_response(self.failed_urls, item, response):
                 return
         else:

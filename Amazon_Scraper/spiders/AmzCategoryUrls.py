@@ -8,7 +8,11 @@ class AmzcategoryurlsSpider(scrapy.Spider):
     BASE_URL = "https://www.amazon.in/gp/{category}"
     custom_settings = {
         "DEPTH_LIMIT": 1,
-        "ITEM_PIPELINES":{}
+        "ITEM_PIPELINES":{},
+        "DOWNLOADER_MIDDLEWARES" : {
+            'scrapy.downloadermiddlewares.useragent.UserAgentMiddleware': None,
+            'scrapy_user_agents.middlewares.RandomUserAgentMiddleware': 400,
+        }
     }
     
     def __init__(self, list_type="bestsellers", logfile=None, *args, **kwargs):
@@ -30,16 +34,22 @@ class AmzcategoryurlsSpider(scrapy.Spider):
 
     def start_requests(self):
         url = self.BASE_URL.format(category=self.settings["CATEGORIES"][self.list_type])
-        yield scrapy.Request(url, callback=self.parse, meta={"list_type": self.list_type})
+        yield scrapy.Request(
+            url, 
+            callback=self.parse, 
+            meta={
+                "list_type": self.list_type,
+            }
+        )
 
     def parse(self, response):
         list_type = response.meta["list_type"]
         current_depth = response.meta.get("depth", 0)
         # url = response.url.split("/ref")[0]        
         self.log(f"Current Depth: {current_depth}")
-        for category in response.xpath("//div[@role='treeitem']"):
-            category_name = category.xpath("./a/text()").get()
-            category_url = response.urljoin(category.xpath("./a/@href").get()).split("/ref")[0]
+        for category in response.xpath("//*[@role='treeitem']"):
+            category_name = category.xpath(".//a/text()").get()
+            category_url = response.urljoin(category.xpath(".//a/@href").get()).split("/ref")[0]
             if (category_name not in self.settings.get('EXCLUDE_CATEGORIES')
                 and category_url.split("/")[-1] != self.settings.get('CATEGORIES')[list_type] 
                 and category_url not in self.visited_url):
