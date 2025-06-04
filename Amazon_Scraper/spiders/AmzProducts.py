@@ -24,9 +24,9 @@ class AmzproductsSpider(scrapy.Spider, DelayHandler):
             "Amazon_Scraper.pipelines.products_pipeline.AmzProductsPipeline": 300,
         },
         "DOWNLOADER_MIDDLEWARES" : {
-            'Amazon_Scraper.middlewares.ProxyMiddleware': None,
-            'Amazon_Scraper.middlewares.RandomizedProxyMiddleware': 100,
-            'scrapy.downloadermiddlewares.httpproxy.HttpProxyMiddleware': 110, # Scrapy's proxy middleware
+            # 'Amazon_Scraper.middlewares.ProxyMiddleware': None,
+            # 'Amazon_Scraper.middlewares.RandomizedProxyMiddleware': 100,
+            # 'scrapy.downloadermiddlewares.httpproxy.HttpProxyMiddleware': 110, # Scrapy's proxy middleware
             'scrapy.downloadermiddlewares.useragent.UserAgentMiddleware': None,
             'scrapy_user_agents.middlewares.RandomUserAgentMiddleware': 400,
             'scrapy.downloadermiddlewares.defaultheaders.DefaultHeadersMiddleware': None,
