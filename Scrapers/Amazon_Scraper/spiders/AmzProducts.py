@@ -80,10 +80,19 @@ class AmzproductsSpider(scrapy.Spider, DelayHandler):
             )
         spider = cls(postgres_handler, *args, crawler=crawler, **kwargs)
         spider.crawler = crawler  # Attach the crawler instance
+        spider.settings = crawler.settings  # Access settings from the crawler
         
         crawler.signals.connect(spider.spider_closed, signal=scrapy.signals.spider_closed)
         return spider
-    
+
+    async def start(self):
+        """
+        New in Scrapy 2.13+: async entry point. To maintain
+        backward-compatibility, just delegate to start_requests().
+        """
+        for req in self.start_requests():
+            yield req
+
     def start_requests(self):
         """
         This function reads the product urls from the staging table in batches of 'batch_size' and
@@ -95,7 +104,7 @@ class AmzproductsSpider(scrapy.Spider, DelayHandler):
             query="""select * from staging.stg_amz__product_url_feeder """,
             batch_size=self.batch_size
         )):
-            self.log(f"Asin Num: {i+1}", 20)
+            # self.log(f"Asin Num: {i+1}", 20)
             try:
                 asin = row['asin']
                 product_url = row['product_url']
@@ -106,7 +115,8 @@ class AmzproductsSpider(scrapy.Spider, DelayHandler):
                     meta={"asin": asin})
             except Exception as e:
                 self.log(f"Error for: {row}\n{e}", 40)
-        
+        self.log(f"Total URLs to scrape: {i+1}", 20)
+
         if self.pipeline.items:
             self.log("Batch Cleanup before requeueing!!", 20)
             self.pipeline.upsert_batch(self.stg_table_name, self)

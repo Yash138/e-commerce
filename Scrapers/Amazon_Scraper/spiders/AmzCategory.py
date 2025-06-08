@@ -1,4 +1,5 @@
 import scrapy
+import os
 from Amazon_Scraper.items import AmazonCategoryItem
 from scrapy.http import Request
 from datetime import datetime as dt
@@ -39,7 +40,8 @@ class AmzcategorySpider(scrapy.Spider):
         return spider
 
     def start_requests(self):
-        with open(f"./.urls_to_scrap/category_ranking_urls_{self.list_type}.txt", "r") as f:
+        path = os.path.join(os.getcwd(), '.urls_to_scrap')
+        with open(f"{path}/category_ranking_urls_{self.list_type}.txt", "r") as f:
             urls = set(f.read().splitlines())
         for url in urls:
             yield scrapy.Request(

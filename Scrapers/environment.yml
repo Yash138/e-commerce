@@ -9,7 +9,7 @@ dependencies:
   - pandas
   - anaconda::psycopg2
   - conda-forge::asyncpg
+  - conda-forge::python-dotenv
   - pip
   - pip:
     - scrapy-user-agents
-prefix: C:\Users\yashl\.conda\envs\venv_scrapy_amazon
