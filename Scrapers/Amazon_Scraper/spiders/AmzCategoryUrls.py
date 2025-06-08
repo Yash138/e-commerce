@@ -1,6 +1,6 @@
 import scrapy
+import os
 from scrapy import signals
-import json
 
 class AmzcategoryurlsSpider(scrapy.Spider):
     name = "AmzCategoryUrls"
@@ -66,7 +66,8 @@ class AmzcategoryurlsSpider(scrapy.Spider):
     
     def spider_closed(self, reason):
         """Save visited URLs when spider closes."""
-        file_path = f"./.urls_to_scrap/category_ranking_urls_{self.list_type}.txt"
+        path = os.path.join(os.getcwd(), '.urls_to_scrap')
+        file_path = f"{path}/category_ranking_urls_{self.list_type}.txt"
         with open(file_path, "w") as file:    # open in overwrite mode
             file.writelines(f"{item}\n" for item in self.visited_url)
         print(f"Saved {len(self.visited_url)} visited URLs to {file_path}")

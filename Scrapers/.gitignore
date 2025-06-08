@@ -132,3 +132,4 @@ dmypy.json
 # output
 .json/
 .urls_to_scrap/
+.venv*
