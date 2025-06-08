@@ -67,6 +67,8 @@ class AmzcategoryurlsSpider(scrapy.Spider):
     def spider_closed(self, reason):
         """Save visited URLs when spider closes."""
         path = os.path.join(os.getcwd(), '.urls_to_scrap')
+        if not os.path.exists(path):
+            os.makedirs(path)
         file_path = f"{path}/category_ranking_urls_{self.list_type}.txt"
         with open(file_path, "w") as file:    # open in overwrite mode
             file.writelines(f"{item}\n" for item in self.visited_url)
