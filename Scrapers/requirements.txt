@@ -1,0 +1,8 @@
+# python version: 3.12
+scrapy
+scrapy-user-agents
+pandas
+psycopg2
+asyncpg
+python-dotenv
+ipykernel

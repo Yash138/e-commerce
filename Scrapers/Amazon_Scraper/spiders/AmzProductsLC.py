@@ -24,12 +24,15 @@ class AmzproductslcSpider(scrapy.Spider, DelayHandler):
         "DOWNLOADER_MIDDLEWARES" : {
             'scrapy.downloadermiddlewares.useragent.UserAgentMiddleware': None,
             'scrapy_user_agents.middlewares.RandomUserAgentMiddleware': 400,
+            'scrapy.downloadermiddlewares.defaultheaders.DefaultHeadersMiddleware': None,
+            'Amazon_Scraper.middlewares.HeaderRotationMiddleware': 500,
+            'scrapy.downloadermiddlewares.cookies.CookiesMiddleware': 700,
         },
         "DOWNLOAD_DELAY" : 8,
         "RANDOMIZE_DOWNLOAD_DELAY" : True,
-        "CONCURRENT_REQUESTS" : 2,
-        "CONCURRENT_REQUESTS_PER_DOMAIN" : 2,
-        "CONCURRENT_REQUESTS_PER_IP" : 2,
+        "CONCURRENT_REQUESTS" : 16,
+        "CONCURRENT_REQUESTS_PER_DOMAIN" : 16,
+        "CONCURRENT_REQUESTS_PER_IP" : 4,
         "COOKIES_ENABLED" : True,
         "RETRY_TIMES": 1,
         "RETRY_DELAY" : 15,
@@ -122,35 +125,9 @@ class AmzproductslcSpider(scrapy.Spider, DelayHandler):
                         "initial_run": True,
                         "scraping_mandatory": row['scraping_mandatory']
                     })
+                # self.is_retry_scheduler = True
+                # yield from self.start_requests()
         # Then process failed URLs if any exist
-        if self.failed_urls:
-            # Filter out URLs that have reached maximum retries
-            urls_to_retry = [url for url in self.failed_urls if url.get('retry_count', 0) < self.retry_count]
-            if urls_to_retry:
-                self.log(f"Retrying {len(urls_to_retry)} failed URLs", 20)
-                for failed_url_data in urls_to_retry:
-                    self.log(f"Retrying URL: {failed_url_data}", 20)
-                    yield scrapy.Request(
-                        url=f"https://www.amazon.in/s?i={failed_url_data['category']}&rh=n%3A{failed_url_data['lowest_category']}&s=popularity-rank&fs=true&page={failed_url_data['refreshed_pages_upto']}",
-                        callback=self.parse,
-                        meta={
-                            "category": failed_url_data['category'],
-                            "lowest_category": failed_url_data['lowest_category'],
-                            "total_pages": failed_url_data['total_pages'],
-                            "refreshed_pages_upto": failed_url_data['refreshed_pages_upto'],
-                            "page": failed_url_data['refreshed_pages_upto'],
-                            "initial_run": False
-                        },
-                        dont_filter=True  # Allow retrying the same URL
-                    )
-
-                # After yielding all retry requests, schedule another start_requests call
-                # This ensures we keep retrying until all URLs either succeed or reach max retries
-                self.is_retry_scheduler = True
-                yield from self.start_requests()
-            else:
-                self.log("All failed URLs have reached maximum retries", 20)
-                self.is_retry_scheduler = False
 
     def parse(self, response):
         # Handle 503 response
@@ -162,10 +139,28 @@ class AmzproductslcSpider(scrapy.Spider, DelayHandler):
             # Find the URL in failed_urls list and update its retry count
             for failed_url in self.failed_urls:
                 if failed_url["category"] == category and failed_url["lowest_category"] == lowest_category:
+                    failed_url['status_code'] = response.status
+                    failed_url['total_pages'] = response.meta.get('total_pages', 0)
+                    failed_url['refreshed_pages_upto'] = response.meta.get('page', 0) - 1 if not response.meta.get('initial_run', False) else response.meta.get('page', 0)
                     failed_url['retry_count'] = failed_url.get('retry_count', 0) + 1
                     if failed_url['retry_count'] >= self.retry_count:
                         self.log(f"Maximum retries ({self.retry_count}) reached for URL: {response.url}", 40)
                         return
+                    else:
+                        self.log(f"Retrying URL: {failed_url}", 20)
+                        yield scrapy.Request(
+                            url=f"https://www.amazon.in/s?i={failed_url['category']}&rh=n%3A{failed_url['lowest_category']}&s=popularity-rank&fs=true&page={failed_url['refreshed_pages_upto']}",
+                            callback=self.parse,
+                            meta={
+                                "category": failed_url['category'],
+                                "lowest_category": failed_url['lowest_category'],
+                                "total_pages": failed_url['total_pages'],
+                                "refreshed_pages_upto": failed_url['refreshed_pages_upto'],
+                                "page": failed_url['refreshed_pages_upto'],
+                                "initial_run": False
+                            },
+                            dont_filter=True  # Allow retrying the same URL
+                        )
                     break
             else:
                 # If URL is not in failed_urls, add it
@@ -179,6 +174,20 @@ class AmzproductslcSpider(scrapy.Spider, DelayHandler):
                     'refreshed_pages_upto': response.meta.get('page', 0) - 1 if not response.meta.get('initial_run', False) else response.meta.get('page', 0)
                 }
                 self.failed_urls.append(failed_url_data)
+                self.log(f"Retrying URL: {failed_url_data}", 20)
+                yield scrapy.Request(
+                    url=f"https://www.amazon.in/s?i={failed_url_data['category']}&rh=n%3A{failed_url_data['lowest_category']}&s=popularity-rank&fs=true&page={failed_url_data['refreshed_pages_upto']}",
+                    callback=self.parse,
+                    meta={
+                        "category": failed_url_data['category'],
+                        "lowest_category": failed_url_data['lowest_category'],
+                        "total_pages": failed_url_data['total_pages'],
+                        "refreshed_pages_upto": failed_url_data['refreshed_pages_upto'],
+                        "page": failed_url_data['refreshed_pages_upto'],
+                        "initial_run": False
+                    },
+                    dont_filter=True  # Allow retrying the same URL
+                )
             return
         self.handle_successful_response(response)
         self.log(f"Processing category: {category}, lowest_category: {lowest_category}", 20)
@@ -257,13 +266,12 @@ class AmzproductslcSpider(scrapy.Spider, DelayHandler):
                 }
             )
         else:
-            self.log(f"Category: {category} | Lowest Category: {lowest_category} | Restricted to Depth: {self.settings['DEPTH_LIMIT']} | Current Page: {current_page} | Total Pages: {self.total_pages}", 20)
             flg_empty_page = False
             if product_count == 0 and skipped_asins == 0: # this will happen when the LC is not having any products on the first page
                 self.log(f"No Products found for category: {category} | Lowest Category: {lowest_category} | Current Page: {current_page}", 20)
                 flg_empty_page = True
             # Update refreshed_pages_upto and last_refresh_timestamp when the last page is reached
-            for x in self.update_category:
+            for i, x in enumerate(self.update_category):
                 if x["category"] == category and x["lowest_category"] == lowest_category:
                     if flg_empty_page:
                         x["refreshed_pages_upto"] = max(0, current_page - 1)  # Ensure it doesn't go below 0
@@ -272,12 +280,37 @@ class AmzproductslcSpider(scrapy.Spider, DelayHandler):
                     x["last_refresh_timestamp"] = dt.now(),
                     x["products_per_page"] = product_count,
                     x["total_pages"] = self.total_pages if not flg_empty_page else self.total_pages - 1
+                    if self.update_category_stats(x):
+                        self.update_category.pop(i)
                     break
-            # update the category_controller table here for the completed category and lowest_category
             for i,failed_url in enumerate(self.failed_urls):
                 if failed_url["category"] == category and failed_url["lowest_category"] == lowest_category:
                     self.failed_urls.pop(i)
                     break
+            
+    
+    def update_category_stats(self, category_stats):
+        self.log(f"Category: {category_stats['category']} | Lowest Category: {category_stats['lowest_category']} | Restricted to Depth: {self.settings['DEPTH_LIMIT']} | Current Page: {category_stats['refreshed_pages_upto']} | Total Pages: {self.total_pages}", 20)
+        try:
+            self.postgres_handler.connect()
+            self.log(f"Updating category stats for {category_stats['category']} | {category_stats['lowest_category']}", 20)
+            self.postgres_handler.update(
+                table="transformed.amz__category_refresh_controller", 
+                data={
+                    "refreshed_pages_upto": category_stats['refreshed_pages_upto'],
+                    "total_pages": category_stats['total_pages'],
+                    "last_refresh_timestamp": category_stats['last_refresh_timestamp'],
+                    "products_per_page": category_stats['products_per_page']
+                },
+                conditions={
+                    "category": category_stats['category'],
+                    "lowest_category": category_stats['lowest_category']
+                }
+            )
+            return True
+        except Exception as e:
+            self.log(f"Error updating category stats for {category_stats['category']} | {category_stats['lowest_category']}: {e}", 40)
+            return False
 
     def spider_closed(self, spider):
         self.log(f"Category stats {self.update_category}", 20)
