@@ -63,7 +63,7 @@ TOP_LOWEST_CATEGORY_VOLUME_QUERY = """
 TOP_PRODUCT_SALES_QUERY = """
     select category, lowest_category, product_name, last_month_sale*coalesce(sell_price, sell_mrp) as total_sales, asin
     from curated.vw_amz_kpi__product_daily_performance
-    where last_month_sale is not null 
+    where last_month_sale is not null and sell_price is not null
     order by total_sales desc
     limit 10
 """
@@ -100,7 +100,7 @@ BELOW_AVG_RATING_LC_QUERY = """
         on kpi_lcdp.category = ac.category_code
     left join transformed.vw_amz__category_hierarchy_flattened_names achfn
         on kpi_lcdp.category = achfn.category and kpi_lcdp.lowest_category = achfn.sub_category
-    where kpi_lcdp.avg_rating is not null
+    where kpi_lcdp.avg_rating is not null and kpi_lcdp.total_volume > 0
     order by avg_rating 
     limit 10
 """
@@ -126,7 +126,7 @@ def load_data(query):
     return df
 
 st.set_page_config(layout="wide", page_title="Amazon Market Insights")
-st.title("Amazon Category & Product Performance Dashboard")
+st.title("Market Pulse & Current Leaders")
 # st.markdown(f"#### Data as of: **{get_latest_scrape_date()}**")
 st.divider()
 
