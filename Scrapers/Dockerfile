@@ -31,8 +31,9 @@ ENV PATH="/app/.venv/bin:$PATH"
 # 6. (Optional) expose if you run Scrapyd or any HTTP service
 EXPOSE 6800
 
-# Make /bin/bash the default entrypoint
-ENTRYPOINT ["/bin/bash", "-lc"]
+COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+ENTRYPOINT ["entrypoint.sh"]
 
-# Default command: just keep the container alive
-CMD ["tail -f /dev/null"]
+# 5. Set the default command (will be overridden by Airflow)
+CMD ["scrapy", "list"]
