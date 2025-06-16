@@ -12,17 +12,17 @@ RUN apt-get update \
 WORKDIR /app
 
 # 2. Copy and install Python dependencies
-COPY requirements.txt .
+COPY Scrapers/requirements.txt .
 RUN python -m venv .venv \
     && . .venv/bin/activate \
     && pip install --upgrade pip \
     && pip install --no-cache-dir -r requirements.txt
 
 # 3. Copy project files
-COPY . .
+COPY Scrapers/. .
 
 # 4. Copy and point to your Docker-specific env file
-COPY .env.docker .env
+COPY Scrapers/.env.docker .env
 ENV ENV_FILE=.env
 
 # 5. Ensure we always use the venv when running commands
@@ -31,7 +31,7 @@ ENV PATH="/app/.venv/bin:$PATH"
 # 6. (Optional) expose if you run Scrapyd or any HTTP service
 EXPOSE 6800
 
-COPY entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY Scrapers/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 ENTRYPOINT ["entrypoint.sh"]
 

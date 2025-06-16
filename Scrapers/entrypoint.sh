@@ -1,5 +1,3 @@
-# File: scrapers/entrypoint.sh
-
 #!/bin/bash
 set -e
 
