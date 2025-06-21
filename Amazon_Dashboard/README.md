@@ -1,14 +1,7 @@
-Of course\! Here is a comprehensive `README.md` file content tailored for your Streamlit dashboarding project. This template incorporates the specific details you provided about the environment setup and running the application.
-
-Just copy and paste the following content into a new file named `README.md` in the root of your project directory.
-
------
-
 # E-commerce Analytics Dashboard
-
+![alt text](./images/image.png)
+![alt text](./images/image-1.png)
 An interactive web dashboard built with Streamlit to visualize and analyze e-commerce data from a PostgreSQL database. This dashboard provides key insights into sales trends, customer behavior, and product performance.
-
-*(**Note:** Replace the link above with an actual screenshot of your dashboard.)*
 
 -----
 
@@ -40,8 +33,8 @@ Follow these steps to get your local development environment set up and running.
 ### 1\. Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/your-repository-name.git
-cd your-repository-name
+git clone https://github.com/Yash138/e-commerce.git
+cd e-commerce/Amazon_Dashboard
 ```
 
 ### 2\. Create and Activate the Environment
