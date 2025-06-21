@@ -5,8 +5,8 @@ import sys
 import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from Amazon_Scraper.helpers.postgres_handler import PostgresDBHandler
-from Amazon_Scraper.settings import POSTGRES_HOST, POSTGRES_DATABASE, POSTGRES_USERNAME, POSTGRES_PASSWORD, POSTGRES_PORT
+from Scrapers.Amazon_Scraper.helpers.postgres_handler import PostgresDBHandler
+from config import POSTGRES_HOST, POSTGRES_DATABASE, POSTGRES_USERNAME, POSTGRES_PASSWORD, POSTGRES_PORT
 
 TOP_CATEGORY_SALES_QUERY = """
     SELECT coalesce(ac.category_name, kpi_lcdp.category) as category,
