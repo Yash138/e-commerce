@@ -1,0 +1,6 @@
+streamlit
+plotly
+matplotlib
+psycopg2
+pandas
+ipykernel
