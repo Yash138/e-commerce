@@ -9,5 +9,6 @@ dependencies:
   - anaconda::psycopg2
   - conda-forge::plotly
   - conda-forge::matplotlib
+  - conda-forge::python-dotenv
   - pip
 prefix: C:\Users\yashl\.conda\envs\streamlit_dashboard
