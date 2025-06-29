@@ -7,13 +7,16 @@ import pendulum
 from airflow.models.dag import DAG
 from airflow.providers.docker.operators.docker import DockerOperator
 from airflow.utils.task_group import TaskGroup
+from common.notifications import slack_notification
+from airflow.providers.slack.operators.slack_webhook import SlackWebhookOperator
 
+SLACK_CONN_ID = "slack_webhook_conn"
+
+# Define the Slack connection ID
 # For your scraper logs
 SCRAPER_LOGS_PATH = "D:/Documents/GitHub/e-commerce.worktrees/airflow_init/scraper_logs"
-
 # For your main scrapers project directory
 SCRAPERS_SHARED_DATA_PATH = "D:/Documents/GitHub/e-commerce.worktrees/airflow_init/shared_data"
-
 DOCKER_DEFAULTS = {
     "image": "scraper-project:latest",
     "docker_url": "unix://var/run/docker.sock",
@@ -36,10 +39,21 @@ with DAG(
     start_date=pendulum.datetime(2025, 6, 15, tz="Asia/Kolkata"),
     schedule="0 22 * * *", # 10 PM IST
     catchup=False,
+    on_success_callback=slack_notification,
+    on_failure_callback=slack_notification,
     tags=["amazon", "scrapy"],
 ) as dag:
     list_types = ["bestsellers", "movers_and_shakers", "hot_new_releases", "most_wished_for"]
+    # Send a notification when the DAG starts
+    start_notification = SlackWebhookOperator(
+        task_id=f"{dag.dag_id}_start_notification",
+        slack_webhook_conn_id=SLACK_CONN_ID,
+        message=f""":large_yellow_circle: *DAG Started*
+            *DAG*: `{dag.dag_id}`
+            *Run ID*: `{{{{ run_id }}}}`""",
+    )
 
+    task_groups = []
     for list_type in list_types:
         with TaskGroup(group_id=f"group_{list_type}") as tg:
             # Task 1: Get Category URLs
@@ -57,3 +71,5 @@ with DAG(
             )
 
             get_urls >> scrape_category
+        task_groups.append(tg)
+    start_notification >> task_groups
