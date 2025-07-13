@@ -206,8 +206,8 @@ class AmzproductslcSpider(scrapy.Spider, DelayHandler):
             self.log(f"Skipping already processed pages for category: {category}, lowest_category: {lowest_category}, current_page: {current_page}, already_refreshed_pages_upto: {response.meta['refreshed_pages_upto']}", 20)
         else:
             # Extract product details
-            item = AmazonProductItem()
             for product in response.xpath('//div[@role="listitem"]'):
+                item = AmazonProductItem()
                 asin = product.xpath('@data-asin').get()
                 if asin in self.processed_asins:
                     self.log(f"Skipping already processed ASIN: {asin}", 20)
@@ -238,6 +238,7 @@ class AmzproductslcSpider(scrapy.Spider, DelayHandler):
                     item['brand_store_url'] = None
                     item['spider_name'] = self.name
                     product_count += 1
+                    self.log(f"Processing ASIN: {asin} | Product Name: {item['product_name']}", 20)
                     yield item
             for x in self.update_category:
                 if x["category"] == category and x["lowest_category"] == lowest_category:
