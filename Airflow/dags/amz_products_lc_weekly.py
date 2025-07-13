@@ -30,12 +30,12 @@ DOCKER_DEFAULTS = {
     "image": "scraper-project:latest",
     "docker_url": "unix://var/run/docker.sock",
     "network_mode": "host",
-    "auto_remove": "success",
+    "auto_remove": True,
     "mount_tmp_dir": False,
     "mounts": [
         Mount(source=SCRAPER_LOGS_PATH, target="/app/logs", type="bind"),
     ],
-    "tty": True,
+    "tty": False,
 }
 
 # ───────────────────────  GENERIC SLACK CALLBACKS  ────────────────────────── #
