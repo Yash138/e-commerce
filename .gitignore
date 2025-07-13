@@ -129,3 +129,7 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+**/logs/
+/scraper_logs/
+/shared_data/
