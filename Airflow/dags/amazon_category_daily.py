@@ -11,11 +11,7 @@ from common.notifications import slack_notification
 from airflow.providers.slack.operators.slack_webhook import SlackWebhookOperator
 
 SLACK_CONN_ID = "slack_webhook_conn"
-
-# Define the Slack connection ID
-# For your scraper logs
 SCRAPER_LOGS_PATH = "D:/Documents/GitHub/e-commerce.worktrees/airflow_init/scraper_logs"
-# For your main scrapers project directory
 SCRAPERS_SHARED_DATA_PATH = "D:/Documents/GitHub/e-commerce.worktrees/airflow_init/shared_data"
 DOCKER_DEFAULTS = {
     "image": "scraper-project:latest",
@@ -24,12 +20,8 @@ DOCKER_DEFAULTS = {
     "auto_remove": "success",
     'mount_tmp_dir': False,
     "mounts": [
-        # This is the corrected format
         Mount(source=SCRAPER_LOGS_PATH, target="/app/logs", type="bind"),
         Mount(source=SCRAPERS_SHARED_DATA_PATH, target="/app/.urls_to_scrap", type="bind"),
-        # You may also need to mount the scraper source itself if the image
-        # doesn't contain the latest version of the code, though it should.
-        # For now, let's just fix the log mount which is likely the cause.
     ],
     "tty": True,
 }
