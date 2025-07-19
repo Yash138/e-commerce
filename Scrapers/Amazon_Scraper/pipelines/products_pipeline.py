@@ -7,7 +7,6 @@ from typing import List, Dict, Any
 
 class AmzProductsPipeline:
     # Class constants for SQL queries
-    REFRESH_FEEDER_SP = 'call staging.sp_amz__refresh_product_url_feeder(\'{}\');'
     UPDATE_PRODUCT_DATA_SP = 'call transformed.sp_amz__scd2_update_product_data();'
     DELETE_FEEDER_QUERY = 'delete from staging.stg_amz__product_url_feeder where asin in (select asin from {} where spider_name = \'{}\');'
     DELETE_ERROR_URLS_QUERY = 'delete from staging.stg_amz__product_error_urls where asin in (select asin from {} where spider_name = \'{}\');'
@@ -102,8 +101,12 @@ class AmzProductsPipeline:
         self.batch_size = spider.batch_size
         self.postgres_handler.connect()
         # self.postgres_handler.execute(f'truncate table {spider.stg_table_name};')
+        # REFRESH_FEEDER_SP = 
         if spider.name == 'AmzProducts':
-            self.postgres_handler.execute(self.REFRESH_FEEDER_SP.format(spider.category))
+            if spider.category:
+                self.postgres_handler.execute('call staging.sp_amz__refresh_product_url_feeder(\'{}\');'.format(spider.category))
+            else:
+                self.postgres_handler.execute('call staging.sp_amz__refresh_product_url_feeder();')
 
     def close_spider(self, spider, msg=None):
         """

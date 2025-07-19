@@ -46,7 +46,7 @@ class CategoryrefreshSpider(scrapy.Spider):
         self.items.setdefault(bs_category, {"category_id":parent_category_id, "category_name":category_name})
         
         # avoid adding category if parent is changed
-        current_category = response.xpath('//*[contains(text(),"Any Department")]/../following-sibling::div[not(@role)]/div[@role="treeitem"]/a/@href').get()
+        current_category = response.xpath('//*[contains(text(),"Any Department")]/../following-sibling::*[not(@role)]/*[@role="treeitem"]//a/@href').get()
         if current_category:
             current_category = current_category.split('/ref')[0].split('/')[-1]
             if current_category != response.url.split("/")[-2]:
@@ -56,11 +56,15 @@ class CategoryrefreshSpider(scrapy.Spider):
                 # eval(f"""self.items[\"{'"]["'.join(tmp[:-1])}\"]""").pop(tmp[-1])
                 return
         
-        for category in response.xpath(f'''
-            //div[@role="treeitem"]/span[contains(text(),"{category_name}")]/../following-sibling::div[@role="group"]/div[@role="treeitem"]
-        '''):
-            category_url = response.urljoin(category.xpath("./a/@href").get()).split("/ref")[0]
-            category_name = category.xpath("./a/text()").get()
+        iterator = response.xpath(f'''
+            //div[@role="treeitem"]/span[contains(text(),"{category_name}")]/../following-sibling::*[@role="group"]/*[@role="treeitem"]
+        ''')
+        if not iterator:
+            self.log(f"No categories found for {category_name} in {response.url}")
+            return
+        for category in iterator:
+            category_url = response.urljoin(category.xpath(".//a/@href").get()).split("/ref")[0]
+            category_name = category.xpath(".//a/text()").get()
             category_id = category_url.split("/")[-1]
             if category_url not in self.visited_url:
                 self.visited_url.add(category_url)
