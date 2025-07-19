@@ -239,6 +239,10 @@ class AmzproductslcSpider(scrapy.Spider, DelayHandler):
                     item['spider_name'] = self.name
                     product_count += 1
                     self.log(f"Processing ASIN: {asin} | Product Name: {item['product_name']}", 20)
+                    if not item['asin']:
+                        self.log(f"Received NULL asin. Skipping!!", 30)
+                        continue
+                    
                     yield item
             for x in self.update_category:
                 if x["category"] == category and x["lowest_category"] == lowest_category:
